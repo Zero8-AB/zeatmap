@@ -60,16 +60,16 @@ class ZeatMap<T> extends StatefulWidget {
   });
 
   @override
-  _ZeatMapState<T> createState() => _ZeatMapState<T>();
+  ZeatMapState<T> createState() => ZeatMapState<T>();
 
   /// Call this method to scroll to a specific month within the widget.
   void scrollToMonth(BuildContext context, int month, int year) {
-    final state = context.findAncestorStateOfType<_ZeatMapState<T>>();
+    final state = context.findAncestorStateOfType<ZeatMapState<T>>();
     state?.scrollToMonth(month, year);
   }
 }
 
-class _ZeatMapState<T> extends State<ZeatMap<T>> {
+class ZeatMapState<T> extends State<ZeatMap<T>> {
   final ScrollController _scrollController = ScrollController();
   late int currentMonth;
   late int currentYear;
@@ -159,11 +159,11 @@ class _ZeatMapState<T> extends State<ZeatMap<T>> {
     return Card(
       elevation: 0,
       child: Padding(
-        padding: EdgeInsets.all(8.0),
+        padding: const EdgeInsets.all(8.0),
         child: Column(
           children: [
             _generateHeader(),
-            Divider(),
+            const Divider(),
             Row(
               children: [
                 _generateRowHeaderColumn(),
@@ -179,13 +179,13 @@ class _ZeatMapState<T> extends State<ZeatMap<T>> {
 
   Widget _generateHeader() {
     return Padding(
-      padding: EdgeInsets.all(8.0),
+      padding: const EdgeInsets.all(8.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         children: [
           Text(
             widget.headerTitle ?? 'ZeatMap',
-            style: TextStyle(
+            style: const TextStyle(
               fontSize: 20,
               fontWeight: FontWeight.bold,
             ),
@@ -195,14 +195,14 @@ class _ZeatMapState<T> extends State<ZeatMap<T>> {
               Tooltip(
                 message: "Go to current month",
                 child: IconButton(
-                  icon: Icon(Icons.calendar_today),
+                  icon: const Icon(Icons.calendar_today),
                   onPressed: scrollToCurrentMonth,
                 ),
               ),
               Tooltip(
                 message: "Go to previous month",
                 child: IconButton(
-                  icon: Icon(Icons.chevron_left),
+                  icon: const Icon(Icons.chevron_left),
                   onPressed: scrollToPreviousMonth,
                 ),
               ),
@@ -211,7 +211,7 @@ class _ZeatMapState<T> extends State<ZeatMap<T>> {
               Tooltip(
                 message: "Go to next month",
                 child: IconButton(
-                  icon: Icon(Icons.chevron_right),
+                  icon: const Icon(Icons.chevron_right),
                   onPressed: scrollToNextMonth,
                 ),
               ),
@@ -225,12 +225,12 @@ class _ZeatMapState<T> extends State<ZeatMap<T>> {
   Widget _generateLegend() {
     return widget.showLegend && widget.legendItems.isNotEmpty
         ? Padding(
-            padding: EdgeInsets.only(top: 16.0),
+            padding: const EdgeInsets.only(top: 16.0),
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: widget.legendItems.map((legendItem) {
                 return Padding(
-                  padding: EdgeInsets.only(left: 8.0),
+                  padding: const EdgeInsets.only(left: 8.0),
                   child: Row(
                     children: [
                       Container(
@@ -242,7 +242,7 @@ class _ZeatMapState<T> extends State<ZeatMap<T>> {
                         ),
                       ),
                       Padding(
-                        padding: EdgeInsets.only(left: 4.0),
+                        padding: const EdgeInsets.only(left: 4.0),
                         child: Text(legendItem.label),
                       ),
                     ],
@@ -328,7 +328,7 @@ class _ZeatMapState<T> extends State<ZeatMap<T>> {
 
               Widget dayWidget = Container(
                 decoration: widget.highlightToday && isToday
-                    ? BoxDecoration(
+                    ? const BoxDecoration(
                         shape: BoxShape.circle,
                         color: Colors.blue,
                       )
@@ -341,7 +341,7 @@ class _ZeatMapState<T> extends State<ZeatMap<T>> {
                         child: Text(
                           DateFormat('d').format(currentDate),
                           style: widget.highlightToday && isToday
-                              ? TextStyle(
+                              ? const TextStyle(
                                   fontWeight: FontWeight.bold,
                                   color: Colors.white)
                               : null,
@@ -372,7 +372,7 @@ class _ZeatMapState<T> extends State<ZeatMap<T>> {
                           child: Text(
                             "W${getWeekNumber(widget.dates[index])}",
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         )
                       : null,
@@ -397,7 +397,7 @@ class _ZeatMapState<T> extends State<ZeatMap<T>> {
                           child: Text(
                             DateFormat('MMM').format(widget.dates[index]),
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         )
                       : null,
@@ -423,7 +423,7 @@ class _ZeatMapState<T> extends State<ZeatMap<T>> {
                           child: Text(
                             DateFormat('yyyy').format(widget.dates[index]),
                             overflow: TextOverflow.ellipsis,
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                            style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
                         )
                       : null,
@@ -465,8 +465,8 @@ class _ZeatMapState<T> extends State<ZeatMap<T>> {
     DateTime date = widget.dates[columnIndex];
     Color color =
         date.weekday == DateTime.saturday || date.weekday == DateTime.sunday
-            ? Color.fromARGB(110, 255, 131, 131)
-            : Color.fromARGB(110, 221, 221, 221);
+            ? const Color.fromARGB(110, 255, 131, 131)
+            : const Color.fromARGB(110, 221, 221, 221);
     return ZeatMapItem(
       ZeatMapPosition(rowIndex, columnIndex),
       rowData: data,
