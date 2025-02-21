@@ -24,6 +24,7 @@ class ZeatMap<T> extends StatefulWidget {
   final Container Function(DateTime date)? dayBuilder;
   final String? headerTitle;
   final double rowHeaderWidth;
+  final Color? cardColor;
 
   // Event handlers
   final void Function(ZeatMapItem<T> item)? onItemTapped;
@@ -57,6 +58,7 @@ class ZeatMap<T> extends StatefulWidget {
     this.onItemTapDown,
     this.onItemTapCancel,
     this.headerTitle,
+    this.cardColor,
   });
 
   @override
@@ -158,6 +160,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   Widget build(BuildContext context) {
     return Card(
       elevation: 0,
+      color: widget.cardColor ?? Theme.of(context).cardColor,
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Column(
@@ -484,9 +487,22 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
     return activeRows;
   }
 
+  /// Returns the ISO 8601 week number for the given [date].
+  ///
+  /// The week number is calculated based on the ISO 8601 standard,
+  /// which defines the first week of the year as the week containing
+  /// the first Thursday of the year.
+  ///
+  /// [date]: The date for which to calculate the week number.
+  ///
+  /// Returns an integer representing the week number.
   int getWeekNumber(DateTime date) {
-    final diff = date.difference(DateTime(date.year, 1, 1)).inDays +
-        (DateTime(date.year, 1, 1).weekday - 1);
-    return (diff / 7).floor() + 1;
+    // ISO 8601 week date system
+    // Week starts on Monday and the first week of the year contains the first Thursday
+    final firstDayOfYear = DateTime(date.year, 1, 1);
+    final firstThursday = firstDayOfYear
+        .add(Duration(days: (4 - firstDayOfYear.weekday + 7) % 7));
+    final weekNumber = ((date.difference(firstThursday).inDays) / 7).ceil() + 1;
+    return weekNumber;
   }
 }
