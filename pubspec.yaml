@@ -1,10 +1,11 @@
 name: zeatmap
-description: "A new Flutter package project."
+description: "A Flutter package for creating a heatmap."
 version: 0.0.2
 homepage: https://zero8.io
+publish_to: none
 
 environment:
-  sdk: ^3.5.3
+  sdk: ^3.5.0
   flutter: ">=1.17.0"
 
 dependencies:
