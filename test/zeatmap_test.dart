@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:zeatmap/zeat_map_legend_item.dart';
+import 'package:zeatmap/src/zeatmap_legend_item.dart';
 import 'package:zeatmap/zeatmap.dart';
 
-import 'package:zeatmap/zeatmap_item.dart';
-import 'package:zeatmap/zeatmap_position.dart';
+import 'package:zeatmap/src/zeatmap_item.dart';
+import 'package:zeatmap/src/zeatmap_position.dart';
 
 void main() {
   test('ZeatMapItem', () {

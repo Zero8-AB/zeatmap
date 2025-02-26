@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:zeatmap/zeatmap_position.dart';
+import 'package:zeatmap/src/zeatmap_position.dart';
 
 class ZeatMapItem<T> {
   ZeatMapPosition position;
