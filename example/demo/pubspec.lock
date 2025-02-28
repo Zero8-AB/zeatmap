@@ -209,7 +209,7 @@ packages:
     source: hosted
     version: "14.2.5"
   zeatmap:
-    dependency: "direct dev"
+    dependency: "direct main"
     description:
       path: "../.."
       relative: true

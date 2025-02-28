@@ -2,22 +2,26 @@ import 'package:flutter/material.dart';
 import 'package:zeatmap/zeatmap.dart';
 
 void main() {
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
 class MyApp extends StatelessWidget {
+  const MyApp({super.key});
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       home: Scaffold(
-        appBar: AppBar(title: Text('ZeatMap Example')),
-        body: ZeatMapExample(),
+        appBar: AppBar(title: const Text('ZeatMap Example')),
+        body: const ZeatMapExample(),
       ),
     );
   }
 }
 
 class ZeatMapExample extends StatelessWidget {
+  const ZeatMapExample({super.key});
+
   @override
   Widget build(BuildContext context) {
     final dates = List<DateTime>.generate(
