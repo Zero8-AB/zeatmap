@@ -63,8 +63,7 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
   }
 
   void _generateDataForYear(int year) {
-    final random = Random(
-        year); // Seed with year for consistent but different patterns per year
+// Seed with year for consistent but different patterns per year
     final Map<String, List<Color>> rowData = {};
 
     // Generate different patterns for each row
@@ -142,7 +141,7 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
       dates: dates,
       rowHeaders: rowHeaders,
       rowHeaderBuilder: (rowData) =>
-          Text(rowData, style: TextStyle(fontWeight: FontWeight.bold)),
+          Text(rowData, style: const TextStyle(fontWeight: FontWeight.bold)),
       rowHeaderWidth: 100,
       itemBuilder: (rowIndex, columnIndex) {
         final position = ZeatMapPosition(rowIndex, columnIndex);
@@ -170,8 +169,8 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text("${rowHeaders[rowIndex]}",
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              Text(rowHeaders[rowIndex],
+                  style: const TextStyle(fontWeight: FontWeight.bold)),
               Text("Date: ${DateFormat('yyyy-MM-dd').format(date)}"),
               Container(
                 height: 10,
