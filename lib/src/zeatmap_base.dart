@@ -16,15 +16,24 @@ class ZeatMap<T> extends StatefulWidget {
   final bool showWeek;
   final bool showMonth;
   final bool showYear;
+
+  /// Whether to display the year dropdown in the header
+  final bool showYearDropdown;
   final bool highlightToday;
   final List<ZeatMapLegendItem> legendItems;
   final bool showLegend;
   final Widget Function(T rowData) rowHeaderBuilder;
   final ZeatMapItem<T> Function(int rowIndex, int columnIndex)? itemBuilder;
-  final Container Function(DateTime date)? dayBuilder;
+  final Widget Function(DateTime date)? dayBuilder;
   final String? headerTitle;
   final double rowHeaderWidth;
   final Color? cardColor;
+
+  /// Optional list of years to show in the dropdown. If not provided, years will be extracted from dates.
+  final List<int>? years;
+
+  /// Optional parameter to set the initially selected year. If not provided, defaults to current year or first available year.
+  final int? selectedYear;
 
   // Event handlers
   final void Function(ZeatMapItem<T> item)? onItemTapped;
@@ -32,6 +41,8 @@ class ZeatMap<T> extends StatefulWidget {
   final void Function(ZeatMapItem<T> item)? onItemDoubleTapped;
   final void Function(ZeatMapItem<T> item)? onItemTapDown;
   final void Function(ZeatMapItem<T> item)? onItemTapCancel;
+  // Callback when year changes
+  final void Function(int year)? onYearChanged;
 
   const ZeatMap({
     super.key,
@@ -46,6 +57,7 @@ class ZeatMap<T> extends StatefulWidget {
     this.showMonth = true,
     this.showWeek = false,
     this.showYear = false,
+    this.showYearDropdown = true,
     this.highlightToday = true,
     this.showLegend = true,
     this.rowSpacing = 8,
@@ -57,8 +69,11 @@ class ZeatMap<T> extends StatefulWidget {
     this.onItemDoubleTapped,
     this.onItemTapDown,
     this.onItemTapCancel,
+    this.onYearChanged,
     this.headerTitle,
     this.cardColor,
+    this.years,
+    this.selectedYear,
   });
 
   @override
@@ -75,6 +90,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   final ScrollController _scrollController = ScrollController();
   late int currentMonth;
   late int currentYear;
+  late List<int> _availableYears;
 
   @override
   void initState() {
@@ -82,7 +98,23 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
     // Initialize to the current date by default
     final now = DateTime.now();
     currentMonth = now.month;
-    currentYear = now.year;
+
+    // Calculate the available years from the available dates
+    _updateDateBoundaries();
+
+    // Determine the initial year based on provided parameters
+    if (widget.selectedYear != null &&
+        _availableYears.contains(widget.selectedYear)) {
+      // Use the explicitly provided year if it's in the available years
+      currentYear = widget.selectedYear!;
+    } else {
+      // Otherwise use current year if available, or first available year
+      currentYear = _availableYears.contains(now.year)
+          ? now.year
+          : _availableYears.isNotEmpty
+              ? _availableYears.first
+              : now.year;
+    }
 
     // Scroll to the initialized month and year
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -93,6 +125,11 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   @override
   void didUpdateWidget(covariant ZeatMap<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
+
+    // Recalculate date boundaries if dates changed
+    if (oldWidget.dates != widget.dates) {
+      _updateDateBoundaries();
+    }
 
     // Automatically scroll to currentMonth when widget updates (e.g., new dates provided)
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -105,6 +142,44 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
     _scrollController.dispose();
     super.dispose();
   }
+
+  /// Update the year boundaries and get all available years from dates
+  void _updateDateBoundaries() {
+    if (widget.dates.isEmpty) {
+      _availableYears = [DateTime.now().year];
+      return;
+    }
+
+    // If years are explicitly provided, use them
+    if (widget.years != null && widget.years!.isNotEmpty) {
+      _availableYears = List<int>.from(widget.years!)..sort();
+    } else {
+      // Otherwise extract years from the dates
+      _availableYears = widget.dates.map((date) => date.year).toSet().toList()
+        ..sort();
+    }
+  }
+
+  /// Set current year and notify caller if callback exists
+  void _setYear(int year) {
+    if (currentYear != year) {
+      setState(() {
+        currentYear = year;
+        // When changing year, default to January of that year
+        currentMonth = 1;
+        scrollToMonth(currentMonth, currentYear);
+      });
+
+      // Notify caller about year change
+      widget.onYearChanged?.call(year);
+    }
+  }
+
+  /// Check if previous month is available (within current year)
+  bool get hasPreviousMonth => currentMonth > 1;
+
+  /// Check if next month is available (within current year)
+  bool get hasNextMonth => currentMonth < 12;
 
   /// Method to scroll to the beginning of a specific month
   void scrollToMonth(int month, int year) {
@@ -139,21 +214,38 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   /// Scroll to the current month
   void scrollToCurrentMonth() {
     var now = DateTime.now();
-    scrollToMonth(now.month, now.year);
+    // Check if today's year is in the available years
+    if (_availableYears.contains(now.year)) {
+      // If yes, navigate to current month of current year
+      if (now.year != currentYear) {
+        // If the year is changing, notify the caller
+        widget.onYearChanged?.call(now.year);
+      }
+      setState(() {
+        currentYear = now.year;
+        currentMonth = now.month;
+      });
+      scrollToMonth(now.month, now.year);
+    } else {
+      // If today's year is not available, just stay in current year but go to current month number
+      scrollToMonth(now.month, currentYear);
+    }
   }
 
-  /// Scroll to the previous month
+  /// Scroll to the previous month (within current year)
   void scrollToPreviousMonth() {
-    int previousMonth = currentMonth == 1 ? 12 : currentMonth - 1;
-    int previousYear = currentMonth == 1 ? currentYear - 1 : currentYear;
-    scrollToMonth(previousMonth, previousYear);
+    if (hasPreviousMonth) {
+      int previousMonth = currentMonth - 1;
+      scrollToMonth(previousMonth, currentYear);
+    }
   }
 
-  /// Scroll to the next month
+  /// Scroll to the next month (within current year)
   void scrollToNextMonth() {
-    int nextMonth = currentMonth == 12 ? 1 : currentMonth + 1;
-    int nextYear = currentMonth == 12 ? currentYear + 1 : currentYear;
-    scrollToMonth(nextMonth, nextYear);
+    if (hasNextMonth) {
+      int nextMonth = currentMonth + 1;
+      scrollToMonth(nextMonth, currentYear);
+    }
   }
 
   @override
@@ -202,20 +294,46 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
                   onPressed: scrollToCurrentMonth,
                 ),
               ),
+              // Year dropdown - conditionally shown
+              if (widget.showYearDropdown)
+                DropdownButton<int>(
+                  value: _availableYears.contains(currentYear)
+                      ? currentYear
+                      : _availableYears.first,
+                  items: _availableYears
+                      .map((year) => DropdownMenuItem(
+                            value: year,
+                            child: Text(year.toString()),
+                          ))
+                      .toList(),
+                  onChanged: (year) {
+                    if (year != null) {
+                      _setYear(year);
+                    }
+                  },
+                ),
+              // Month navigation
               Tooltip(
                 message: "Go to previous month",
                 child: IconButton(
                   icon: const Icon(Icons.chevron_left),
-                  onPressed: scrollToPreviousMonth,
+                  onPressed: hasPreviousMonth ? scrollToPreviousMonth : null,
                 ),
               ),
-              Text(DateFormat("MMMM")
-                  .format(DateTime(currentYear, currentMonth))),
+              // Date display section with month and year
+              Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(DateFormat("MMMM")
+                      .format(DateTime(currentYear, currentMonth))),
+                ],
+              ),
+              // Month navigation
               Tooltip(
                 message: "Go to next month",
                 child: IconButton(
                   icon: const Icon(Icons.chevron_right),
-                  onPressed: scrollToNextMonth,
+                  onPressed: hasNextMonth ? scrollToNextMonth : null,
                 ),
               ),
             ],
