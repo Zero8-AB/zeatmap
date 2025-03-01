@@ -18,7 +18,7 @@ Add the following to your `pubspec.yaml` file:
 dependencies:
   zeatmap:
     git:
-      url: [https://ZERO8AB@dev.azure.com/ZERO8AB/Flutter%20Libraries/_git/zeatmap](https://github.com/Zero8-AB/zeatmap.git)
+      url: https://github.com/Zero8-AB/zeatmap.git
       ref: main
 ```
 
