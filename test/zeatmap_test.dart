@@ -60,7 +60,7 @@ void main() {
 
     // Test item grid
     expect(find.byType(GestureDetector),
-        findsNWidgets(23)); // 2 rows * 10 columns + 3 navigation buttons
+        findsNWidgets(24)); // 2 rows * 10 columns + 4 navigation buttons
 
     // Test scrolling
     await tester.tap(find.byIcon(Icons.chevron_right));
