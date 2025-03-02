@@ -37,6 +37,16 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
   final Map<int, Map<String, List<Color>>> _yearData = {};
   final List<String> rowHeaders = ['Project A', 'Project B', 'Project C'];
 
+  // ZeatMap configuration options
+  bool _scrollingEnabled = false;
+  bool _showDay = true;
+  bool _showWeek = false;
+  bool _showMonth = true;
+  bool _showYear = false;
+  bool _showLegend = true;
+  bool _highlightToday = true;
+  bool _showYearDropdown = true;
+
   // Different color intensity levels
   final List<Color> intensityLevels = [
     Colors.red[100]!,
@@ -137,81 +147,179 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
       ZeatMapLegendItem(intensityLevels[8], 'High'),
     ];
 
-    return ZeatMap<String>(
-      dates: dates,
-      rowHeaders: rowHeaders,
-      rowHeaderBuilder: (rowData) =>
-          Text(rowData, style: const TextStyle(fontWeight: FontWeight.bold)),
-      rowHeaderWidth: 100,
-      itemBuilder: (rowIndex, columnIndex) {
-        final position = ZeatMapPosition(rowIndex, columnIndex);
-        // Make sure columnIndex is within bounds
-        if (columnIndex >= dates.length) {
-          return ZeatMapItem<String>(
-            position,
-            rowData: rowHeaders[rowIndex],
-            color: Colors.grey,
-            date: DateTime.now(),
-          );
-        }
+    return Column(
+      children: [
+        Expanded(
+          child: ZeatMap<String>(
+            dates: dates,
+            rowHeaders: rowHeaders,
+            rowHeaderBuilder: (rowData) => Text(rowData,
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            rowHeaderWidth: 100,
+            scrollingEnabled: _scrollingEnabled,
+            showDay: _showDay,
+            showWeek: _showWeek,
+            showMonth: _showMonth,
+            showYear: _showYear,
+            showLegend: _showLegend,
+            highlightToday: _highlightToday,
+            showYearDropdown: _showYearDropdown,
+            itemBuilder: (rowIndex, columnIndex) {
+              final position = ZeatMapPosition(rowIndex, columnIndex);
+              // Make sure columnIndex is within bounds
+              if (columnIndex >= dates.length) {
+                return ZeatMapItem<String>(
+                  position,
+                  rowData: rowHeaders[rowIndex],
+                  color: Colors.grey,
+                  date: DateTime.now(),
+                );
+              }
 
-        final date = dates[columnIndex];
+              final date = dates[columnIndex];
 
-        // Get the color for this specific day
-        final Color color = _yearData[currentYear]?[rowHeaders[rowIndex]]
-                ?[columnIndex] ??
-            Colors.grey[300]!;
+              // Get the color for this specific day
+              final Color color = _yearData[currentYear]?[rowHeaders[rowIndex]]
+                      ?[columnIndex] ??
+                  Colors.grey[300]!;
 
-        // Create a tooltip showing the date and intensity
-        final tooltipWidget = Padding(
-          padding: const EdgeInsets.all(8.0),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(rowHeaders[rowIndex],
-                  style: const TextStyle(fontWeight: FontWeight.bold)),
-              Text("Date: ${DateFormat('yyyy-MM-dd').format(date)}"),
-              Container(
-                height: 10,
-                width: 30,
+              // Create a tooltip showing the date and intensity
+              final tooltipWidget = Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(rowHeaders[rowIndex],
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text("Date: ${DateFormat('yyyy-MM-dd').format(date)}"),
+                    Container(
+                      height: 10,
+                      width: 30,
+                      color: color,
+                      margin: const EdgeInsets.symmetric(vertical: 5),
+                    ),
+                  ],
+                ),
+              );
+
+              return ZeatMapItem<String>(
+                position,
+                rowData: rowHeaders[rowIndex],
                 color: color,
-                margin: const EdgeInsets.symmetric(vertical: 5),
-              ),
-            ],
+                date: date,
+                tooltipWidget: tooltipWidget,
+              );
+            },
+            legendItems: legendItems,
+            headerTitle: 'Activity Heatmap',
+            onYearChanged: (year) {
+              _generateDatesForYear(year);
+            },
+            years: allowedYears,
+            dayBuilder: (date) {
+              // show day number, and on hoover show day name
+              return Tooltip(
+                message: DateFormat('EEEE').format(date),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Text(
+                      '${date.day}',
+                      style: const TextStyle(color: Colors.black),
+                    ),
+                  ],
+                ),
+              );
+            },
           ),
-        );
+        ),
+        _buildControlPanel(),
+      ],
+    );
+  }
 
-        return ZeatMapItem<String>(
-          position,
-          rowData: rowHeaders[rowIndex],
-          color: color,
-          date: date,
-          tooltipWidget: tooltipWidget,
-        );
-      },
-      highlightToday: true,
-      legendItems: legendItems,
-      headerTitle: 'Activity Heatmap',
-      onYearChanged: (year) {
-        _generateDatesForYear(year);
-      },
-      years: allowedYears,
-      dayBuilder: (date) {
-        // show day number, and on hoover show day name
-        return Tooltip(
-          message: DateFormat('EEEE').format(date),
-          child: Row(
-            mainAxisAlignment: MainAxisAlignment.center,
+  Widget _buildControlPanel() {
+    return Container(
+      padding: const EdgeInsets.all(16.0),
+      decoration: BoxDecoration(
+        color: Colors.grey[200],
+        borderRadius: const BorderRadius.only(
+          topLeft: Radius.circular(16.0),
+          topRight: Radius.circular(16.0),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'ZeatMap Controls',
+            style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 16.0,
+            runSpacing: 12.0,
             children: [
-              Text(
-                '${date.day}',
-                style: const TextStyle(color: Colors.black),
-              ),
+              _buildToggle('Scrolling', _scrollingEnabled, (value) {
+                setState(() => _scrollingEnabled = value);
+              }),
+              _buildToggle('Show Day', _showDay, (value) {
+                setState(() => _showDay = value);
+              }),
+              _buildToggle('Show Week', _showWeek, (value) {
+                setState(() => _showWeek = value);
+              }),
+              _buildToggle('Show Month', _showMonth, (value) {
+                setState(() => _showMonth = value);
+              }),
+              _buildToggle('Show Year', _showYear, (value) {
+                setState(() => _showYear = value);
+              }),
+              _buildToggle('Show Legend', _showLegend, (value) {
+                setState(() => _showLegend = value);
+              }),
+              _buildToggle('Highlight Today', _highlightToday, (value) {
+                setState(() => _highlightToday = value);
+              }),
+              _buildToggle('Year Dropdown', _showYearDropdown, (value) {
+                setState(() => _showYearDropdown = value);
+              }),
             ],
           ),
-        );
-      },
+        ],
+      ),
+    );
+  }
+
+  Widget _buildToggle(String label, bool value, ValueChanged<bool> onChanged) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 2.0,
+            spreadRadius: 0.0,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(label),
+            const SizedBox(width: 8.0),
+            Switch(
+              value: value,
+              onChanged: onChanged,
+              activeColor: Colors.blue,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }
