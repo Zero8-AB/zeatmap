@@ -29,6 +29,9 @@ class ZeatMap<T> extends StatefulWidget {
   final double rowHeaderWidth;
   final Color? cardColor;
 
+  /// Whether horizontal scrolling is enabled on the ZeatMap
+  final bool scrollingEnabled;
+
   /// Optional list of years to show in the dropdown. If not provided, years will be extracted from dates.
   final List<int>? years;
 
@@ -64,6 +67,7 @@ class ZeatMap<T> extends StatefulWidget {
     this.columnSpacing = 8,
     this.itemSize = 30,
     this.itemBorderRadius = 5.0,
+    this.scrollingEnabled = true,
     this.onItemTapped,
     this.onItemLongPressed,
     this.onItemDoubleTapped,
@@ -380,6 +384,9 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
       child: SingleChildScrollView(
         controller: _scrollController,
         scrollDirection: Axis.horizontal,
+        physics: widget.scrollingEnabled
+            ? const AlwaysScrollableScrollPhysics()
+            : const NeverScrollableScrollPhysics(),
         child: Column(
           children: [
             _generateDateRowYear(),

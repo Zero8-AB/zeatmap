@@ -143,6 +143,7 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
       rowHeaderBuilder: (rowData) =>
           Text(rowData, style: const TextStyle(fontWeight: FontWeight.bold)),
       rowHeaderWidth: 100,
+      scrollingEnabled: false,
       itemBuilder: (rowIndex, columnIndex) {
         final position = ZeatMapPosition(rowIndex, columnIndex);
         // Make sure columnIndex is within bounds
