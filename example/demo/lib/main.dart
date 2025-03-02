@@ -48,6 +48,12 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
   bool _showYearDropdown = true;
   ZeatMapLegendPosition _legendPosition = ZeatMapLegendPosition.center;
 
+  // Visual property controls
+  double _itemSize = 30.0;
+  double _itemBorderRadius = 5.0;
+  double _columnSpacing = 8.0;
+  double _rowSpacing = 8.0;
+
   // Different color intensity levels
   final List<Color> intensityLevels = [
     Colors.red[100]!,
@@ -166,6 +172,10 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
             highlightToday: _highlightToday,
             showYearDropdown: _showYearDropdown,
             legendPosition: _legendPosition,
+            itemSize: _itemSize,
+            itemBorderRadius: _itemBorderRadius,
+            columnSpacing: _columnSpacing,
+            rowSpacing: _rowSpacing,
             itemBuilder: (rowIndex, columnIndex) {
               final position = ZeatMapPosition(rowIndex, columnIndex);
               // Make sure columnIndex is within bounds
@@ -288,6 +298,22 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
                 setState(() => _showYearDropdown = value);
               }),
               _buildLegendPositionControl(),
+              _buildPropertyControl('Item Size', _itemSize, 15.0, 50.0,
+                  (value) {
+                setState(() => _itemSize = value);
+              }),
+              _buildPropertyControl(
+                  'Border Radius', _itemBorderRadius, 0.0, 25.0, (value) {
+                setState(() => _itemBorderRadius = value);
+              }),
+              _buildPropertyControl('Column Spacing', _columnSpacing, 0.0, 20.0,
+                  (value) {
+                setState(() => _columnSpacing = value);
+              }),
+              _buildPropertyControl('Row Spacing', _rowSpacing, 0.0, 20.0,
+                  (value) {
+                setState(() => _rowSpacing = value);
+              }),
             ],
           ),
         ],
@@ -365,6 +391,64 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildPropertyControl(String label, double value, double min,
+      double max, ValueChanged<double> onChanged) {
+    final TextEditingController controller =
+        TextEditingController(text: value.toStringAsFixed(1));
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 10.0),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 2.0,
+            spreadRadius: 0.0,
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          SizedBox(
+            width: 120,
+            child: Text(label,
+                style: const TextStyle(fontWeight: FontWeight.w500)),
+          ),
+          SizedBox(
+            width: 80, // Fixed narrow width for input field
+            child: TextField(
+              controller: controller,
+              keyboardType:
+                  const TextInputType.numberWithOptions(decimal: true),
+              decoration: InputDecoration(
+                isDense: true,
+                contentPadding:
+                    const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(8.0),
+                ),
+                hintText:
+                    '${min.toStringAsFixed(1)} - ${max.toStringAsFixed(1)}',
+              ),
+              onSubmitted: (value) {
+                double? newValue = double.tryParse(value);
+                if (newValue != null) {
+                  newValue = newValue.clamp(min, max);
+                  controller.text = newValue.toStringAsFixed(1);
+                  onChanged(newValue);
+                }
+              },
+            ),
+          ),
+        ],
       ),
     );
   }
