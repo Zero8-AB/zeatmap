@@ -5,6 +5,13 @@ import 'package:zeatmap/src/zeatmap_item.dart';
 import 'package:intl/intl.dart';
 import 'package:zeatmap/src/zeatmap_position.dart';
 
+/// Enum defining possible positions for the legend
+enum ZeatMapLegendPosition {
+  start,
+  center,
+  end,
+}
+
 class ZeatMap<T> extends StatefulWidget {
   final List<DateTime> dates;
   final List<T> rowHeaders;
@@ -22,6 +29,10 @@ class ZeatMap<T> extends StatefulWidget {
   final bool highlightToday;
   final List<ZeatMapLegendItem> legendItems;
   final bool showLegend;
+
+  /// Determines the horizontal position of the legend
+  final ZeatMapLegendPosition legendPosition;
+
   final Widget Function(T rowData) rowHeaderBuilder;
   final ZeatMapItem<T> Function(int rowIndex, int columnIndex)? itemBuilder;
   final Widget Function(DateTime date)? dayBuilder;
@@ -63,6 +74,7 @@ class ZeatMap<T> extends StatefulWidget {
     this.showYearDropdown = true,
     this.highlightToday = true,
     this.showLegend = true,
+    this.legendPosition = ZeatMapLegendPosition.center,
     this.rowSpacing = 8,
     this.columnSpacing = 8,
     this.itemSize = 30,
@@ -352,7 +364,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
         ? Padding(
             padding: const EdgeInsets.only(top: 16.0),
             child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
+              mainAxisAlignment: _getLegendAlignment(),
               children: widget.legendItems.map((legendItem) {
                 return Padding(
                   padding: const EdgeInsets.only(left: 8.0),
@@ -377,6 +389,19 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
             ),
           )
         : Container();
+  }
+
+  /// Converts the legendPosition enum to a MainAxisAlignment value
+  MainAxisAlignment _getLegendAlignment() {
+    switch (widget.legendPosition) {
+      case ZeatMapLegendPosition.start:
+        return MainAxisAlignment.start;
+      case ZeatMapLegendPosition.end:
+        return MainAxisAlignment.end;
+      case ZeatMapLegendPosition.center:
+      default:
+        return MainAxisAlignment.center;
+    }
   }
 
   Expanded _generateDataGrid(BuildContext context) {

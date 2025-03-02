@@ -46,6 +46,7 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
   bool _showLegend = true;
   bool _highlightToday = true;
   bool _showYearDropdown = true;
+  ZeatMapLegendPosition _legendPosition = ZeatMapLegendPosition.center;
 
   // Different color intensity levels
   final List<Color> intensityLevels = [
@@ -164,6 +165,7 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
             showLegend: _showLegend,
             highlightToday: _highlightToday,
             showYearDropdown: _showYearDropdown,
+            legendPosition: _legendPosition,
             itemBuilder: (rowIndex, columnIndex) {
               final position = ZeatMapPosition(rowIndex, columnIndex);
               // Make sure columnIndex is within bounds
@@ -285,6 +287,7 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
               _buildToggle('Year Dropdown', _showYearDropdown, (value) {
                 setState(() => _showYearDropdown = value);
               }),
+              _buildLegendPositionControl(),
             ],
           ),
         ],
@@ -316,6 +319,49 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
               value: value,
               onChanged: onChanged,
               activeColor: Colors.blue,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildLegendPositionControl() {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(8.0),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.1),
+            blurRadius: 2.0,
+            spreadRadius: 0.0,
+          ),
+        ],
+      ),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 12.0, vertical: 8.0),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text('Legend Position'),
+            const SizedBox(width: 8.0),
+            DropdownButton<ZeatMapLegendPosition>(
+              value: _legendPosition,
+              onChanged: (ZeatMapLegendPosition? newValue) {
+                setState(() {
+                  if (newValue != null) {
+                    _legendPosition = newValue;
+                  }
+                });
+              },
+              items: ZeatMapLegendPosition.values
+                  .map((ZeatMapLegendPosition position) {
+                return DropdownMenuItem<ZeatMapLegendPosition>(
+                  value: position,
+                  child: Text(position.toString().split('.').last),
+                );
+              }).toList(),
             ),
           ],
         ),
