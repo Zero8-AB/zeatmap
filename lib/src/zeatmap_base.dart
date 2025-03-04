@@ -5,58 +5,139 @@ import 'package:zeatmap/src/zeatmap_item.dart';
 import 'package:intl/intl.dart';
 import 'package:zeatmap/src/zeatmap_position.dart';
 
-/// Enum defining possible positions for the legend
+/// Defines the horizontal alignment of the legend within the ZeatMap.
 enum ZeatMapLegendPosition {
-  start,
-  center,
-  end,
+  start, // Aligns the legend to the left
+  center, // Centers the legend horizontally
+  end, // Aligns the legend to the right
 }
 
+/// Defines the time granularity for displaying data in the ZeatMap.
+/// This affects how dates are aggregated and displayed.
+enum ZeatMapGranularity {
+  day, // Shows individual days
+  week, // Aggregates data by week
+  month, // Aggregates data by month
+  year // Aggregates data by year
+}
+
+/// A customizable heatmap widget that displays data over time periods.
+///
+/// ZeatMap allows you to visualize data in a grid format where:
+/// - Rows represent different categories or entities
+/// - Columns represent time periods (days, weeks, months, or years)
+/// - Cell colors indicate data intensity or state
+///
+/// Example usage:
+/// ```dart
+/// ZeatMap<String>(
+///   dates: datesList,
+///   rowHeaders: ['Project A', 'Project B'],
+///   rowHeaderBuilder: (data) => Text(data),
+///   itemBuilder: (row, col) => ZeatMapItem(...),
+///   granularity: ZeatMapGranularity.day,
+/// )
+/// ```
 class ZeatMap<T> extends StatefulWidget {
+  /// The list of dates to display in the heatmap.
+  /// These dates determine the columns of the grid.
   final List<DateTime> dates;
+
+  /// The list of row headers.
+  /// Each header represents a row in the heatmap.
   final List<T> rowHeaders;
+
+  /// Vertical spacing between rows in the heatmap.
   final double rowSpacing;
+
+  /// Horizontal spacing between columns in the heatmap.
   final double columnSpacing;
+
+  /// Size of each cell in the heatmap grid.
   final double itemSize;
+
+  /// Border radius for each cell in the grid.
   final double itemBorderRadius;
+
+  /// Whether to show the day labels above the heatmap.
   final bool showDay;
+
+  /// Whether to show week numbers above the heatmap.
   final bool showWeek;
+
+  /// Whether to show month names above the heatmap.
   final bool showMonth;
+
+  /// Whether to show year numbers above the heatmap.
   final bool showYear;
 
-  /// Whether to display the year dropdown in the header
+  /// Whether to display the year dropdown in the header for quick navigation.
   final bool showYearDropdown;
+
+  /// Whether to highlight the current day in the heatmap.
   final bool highlightToday;
+
+  /// List of legend items to display below the heatmap.
   final List<ZeatMapLegendItem> legendItems;
+
+  /// Whether to show the legend below the heatmap.
   final bool showLegend;
 
-  /// Determines the horizontal position of the legend
+  /// Controls the horizontal alignment of the legend.
   final ZeatMapLegendPosition legendPosition;
 
+  /// Builder function for creating row header widgets.
+  /// This allows custom styling and layout of row headers.
   final Widget Function(T rowData) rowHeaderBuilder;
+
+  /// Builder function for creating heatmap cell items.
+  /// If not provided, a default implementation will be used.
   final ZeatMapItem<T> Function(int rowIndex, int columnIndex)? itemBuilder;
+
+  /// Builder function for creating day label widgets.
+  /// If not provided, a default implementation will be used.
   final Widget Function(DateTime date)? dayBuilder;
+
+  /// Title displayed in the header of the heatmap.
   final String? headerTitle;
+
+  /// Width of the row header column.
   final double rowHeaderWidth;
+
+  /// Background color of the card containing the heatmap.
   final Color? cardColor;
 
-  /// Whether horizontal scrolling is enabled on the ZeatMap
+  /// Whether horizontal scrolling is enabled on the heatmap.
   final bool scrollingEnabled;
 
-  /// Optional list of years to show in the dropdown. If not provided, years will be extracted from dates.
+  /// Optional list of years to show in the dropdown.
+  /// If not provided, years will be extracted from dates.
   final List<int>? years;
 
-  /// Optional parameter to set the initially selected year. If not provided, defaults to current year or first available year.
+  /// Optional parameter to set the initially selected year.
+  /// If not provided, defaults to current year or first available year.
   final int? selectedYear;
 
-  // Event handlers
+  /// Callback when a cell is tapped.
   final void Function(ZeatMapItem<T> item)? onItemTapped;
+
+  /// Callback when a cell is long-pressed.
   final void Function(ZeatMapItem<T> item)? onItemLongPressed;
+
+  /// Callback when a cell is double-tapped.
   final void Function(ZeatMapItem<T> item)? onItemDoubleTapped;
+
+  /// Callback when a cell receives a tap down event.
   final void Function(ZeatMapItem<T> item)? onItemTapDown;
+
+  /// Callback when a cell tap is cancelled.
   final void Function(ZeatMapItem<T> item)? onItemTapCancel;
-  // Callback when year changes
+
+  /// Callback when the selected year changes.
   final void Function(int year)? onYearChanged;
+
+  /// The time granularity for displaying and aggregating data.
+  final ZeatMapGranularity granularity;
 
   const ZeatMap({
     super.key,
@@ -75,6 +156,7 @@ class ZeatMap<T> extends StatefulWidget {
     this.highlightToday = true,
     this.showLegend = true,
     this.legendPosition = ZeatMapLegendPosition.center,
+    this.granularity = ZeatMapGranularity.day,
     this.rowSpacing = 8,
     this.columnSpacing = 8,
     this.itemSize = 30,
@@ -95,7 +177,12 @@ class ZeatMap<T> extends StatefulWidget {
   @override
   ZeatMapState<T> createState() => ZeatMapState<T>();
 
-  /// Call this method to scroll to a specific month within the widget.
+  /// Scrolls the heatmap to display a specific month and year.
+  ///
+  /// Example:
+  /// ```dart
+  /// zeatMapKey.currentState?.scrollToMonth(3, 2024); // Scroll to March 2024
+  /// ```
   void scrollToMonth(BuildContext context, int month, int year) {
     final state = context.findAncestorStateOfType<ZeatMapState<T>>();
     state?.scrollToMonth(month, year);
@@ -108,9 +195,203 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   late int currentYear;
   late List<int> _availableYears;
 
+  /// Get the text to display in the header's date label based on granularity
+  String get headerDateText {
+    switch (widget.granularity) {
+      case ZeatMapGranularity.day:
+        return DateFormat("MMMM").format(DateTime(currentYear, currentMonth));
+      case ZeatMapGranularity.week:
+        final firstVisibleDate = aggregatedDates.firstWhere(
+          (date) =>
+              date.year == currentYear &&
+              getWeekNumber(date) == _currentWeekNumber,
+          orElse: () => DateTime(currentYear, currentMonth, 1),
+        );
+        final weekEnd = firstVisibleDate.add(const Duration(days: 6));
+        return '${DateFormat("MMM d").format(firstVisibleDate)} - ${DateFormat("MMM d").format(weekEnd)}';
+      case ZeatMapGranularity.month:
+        return DateFormat("MMMM yyyy")
+            .format(DateTime(currentYear, currentMonth));
+      case ZeatMapGranularity.year:
+        return currentYear.toString();
+    }
+  }
+
+  /// Check if previous navigation is available based on granularity
+  bool get hasPrevious {
+    switch (widget.granularity) {
+      case ZeatMapGranularity.day:
+        return _currentDayIndex > 0;
+      case ZeatMapGranularity.week:
+        return _currentWeekIndex > 0;
+      case ZeatMapGranularity.month:
+        return currentMonth > 1;
+      case ZeatMapGranularity.year:
+        return _availableYears.indexOf(currentYear) > 0;
+    }
+  }
+
+  /// Check if next navigation is available based on granularity
+  bool get hasNext {
+    switch (widget.granularity) {
+      case ZeatMapGranularity.day:
+        return _currentDayIndex < widget.dates.length - 1;
+      case ZeatMapGranularity.week:
+        return _currentWeekIndex < _aggregateByWeek().length - 1;
+      case ZeatMapGranularity.month:
+        return currentMonth < 12;
+      case ZeatMapGranularity.year:
+        return _availableYears.indexOf(currentYear) <
+            _availableYears.length - 1;
+    }
+  }
+
+  // Additional navigation properties for days
+  int _currentDayIndex = 0;
+
+  // Additional navigation properties for weeks
+  int _currentWeekIndex = 0;
+  int _currentWeekNumber = 1;
+
+  void scrollToPreviousDay() {
+    if (_currentDayIndex > 0) {
+      _currentDayIndex--;
+      final date = widget.dates[_currentDayIndex];
+      currentMonth = date.month;
+      currentYear = date.year;
+      scrollToDate(date);
+    }
+  }
+
+  void scrollToNextDay() {
+    if (_currentDayIndex < widget.dates.length - 1) {
+      _currentDayIndex++;
+      final date = widget.dates[_currentDayIndex];
+      currentMonth = date.month;
+      currentYear = date.year;
+      scrollToDate(date);
+    }
+  }
+
+  void scrollToPreviousWeek() {
+    if (_currentWeekIndex > 0) {
+      _currentWeekIndex--;
+      final weekStartDates = _aggregateByWeek();
+      final date = weekStartDates[_currentWeekIndex];
+      _currentWeekNumber = getWeekNumber(date);
+      currentMonth = date.month;
+      currentYear = date.year;
+      scrollToDate(date);
+    }
+  }
+
+  void scrollToNextWeek() {
+    if (_currentWeekIndex < _aggregateByWeek().length - 1) {
+      _currentWeekIndex++;
+      final weekStartDates = _aggregateByWeek();
+      final date = weekStartDates[_currentWeekIndex];
+      _currentWeekNumber = getWeekNumber(date);
+      currentMonth = date.month;
+      currentYear = date.year;
+      scrollToDate(date);
+    }
+  }
+
+  void scrollToPreviousMonth() {
+    if (currentMonth > 1) {
+      int previousMonth = currentMonth - 1;
+      scrollToMonth(previousMonth, currentYear);
+    }
+  }
+
+  void scrollToNextMonth() {
+    if (currentMonth < 12) {
+      int nextMonth = currentMonth + 1;
+      scrollToMonth(nextMonth, currentYear);
+    }
+  }
+
+  void scrollToPreviousYear() {
+    final currentYearIndex = _availableYears.indexOf(currentYear);
+    if (currentYearIndex > 0) {
+      final previousYear = _availableYears[currentYearIndex - 1];
+      _setYear(previousYear);
+    }
+  }
+
+  void scrollToNextYear() {
+    final currentYearIndex = _availableYears.indexOf(currentYear);
+    if (currentYearIndex < _availableYears.length - 1) {
+      final nextYear = _availableYears[currentYearIndex + 1];
+      _setYear(nextYear);
+    }
+  }
+
+  /// Scroll to a specific date
+  void scrollToDate(DateTime date) {
+    final dates = widget.dates;
+    final targetIndex = dates.indexWhere(
+      (d) => d.year == date.year && d.month == date.month && d.day == date.day,
+      0,
+    );
+
+    if (targetIndex >= 0) {
+      double offset = targetIndex * (widget.itemSize + widget.columnSpacing);
+
+      _scrollController
+          .animateTo(
+        offset,
+        duration: const Duration(milliseconds: 250),
+        curve: Curves.easeInOut,
+      )
+          .then((_) {
+        SchedulerBinding.instance.addPostFrameCallback((_) {
+          setState(() {
+            _currentDayIndex = targetIndex;
+          });
+        });
+      });
+    }
+  }
+
+  void navigateToPrevious() {
+    switch (widget.granularity) {
+      case ZeatMapGranularity.day:
+        scrollToPreviousDay();
+        break;
+      case ZeatMapGranularity.week:
+        scrollToPreviousWeek();
+        break;
+      case ZeatMapGranularity.month:
+        scrollToPreviousMonth();
+        break;
+      case ZeatMapGranularity.year:
+        scrollToPreviousYear();
+        break;
+    }
+  }
+
+  void navigateToNext() {
+    switch (widget.granularity) {
+      case ZeatMapGranularity.day:
+        scrollToNextDay();
+        break;
+      case ZeatMapGranularity.week:
+        scrollToNextWeek();
+        break;
+      case ZeatMapGranularity.month:
+        scrollToNextMonth();
+        break;
+      case ZeatMapGranularity.year:
+        scrollToNextYear();
+        break;
+    }
+  }
+
   @override
   void initState() {
     super.initState();
+
     // Initialize to the current date by default
     final now = DateTime.now();
     currentMonth = now.month;
@@ -130,6 +411,30 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
           : _availableYears.isNotEmpty
               ? _availableYears.first
               : now.year;
+    }
+
+    // Initialize the indices based on the current date
+    if (widget.dates.isNotEmpty) {
+      _currentDayIndex = widget.dates.indexWhere(
+        (date) =>
+            date.year == now.year &&
+            date.month == now.month &&
+            date.day == now.day,
+      );
+      if (_currentDayIndex < 0) {
+        _currentDayIndex = 0; // Default to first date if current date not found
+      }
+
+      final weekStartDates = _aggregateByWeek();
+      _currentWeekNumber = getWeekNumber(now);
+      _currentWeekIndex = weekStartDates.indexWhere(
+        (date) =>
+            getWeekNumber(date) == _currentWeekNumber && date.year == now.year,
+      );
+      if (_currentWeekIndex < 0) {
+        _currentWeekIndex =
+            0; // Default to first week if current week not found
+      }
     }
 
     // Scroll to the initialized month and year
@@ -248,19 +553,94 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
     }
   }
 
-  /// Scroll to the previous month (within current year)
-  void scrollToPreviousMonth() {
-    if (hasPreviousMonth) {
-      int previousMonth = currentMonth - 1;
-      scrollToMonth(previousMonth, currentYear);
+  /// Aggregates dates based on the current granularity setting.
+  /// Returns a list of representative dates for each time period.
+  List<DateTime> get aggregatedDates {
+    switch (widget.granularity) {
+      case ZeatMapGranularity.day:
+        return widget.dates;
+      case ZeatMapGranularity.week:
+        return _aggregateByWeek();
+      case ZeatMapGranularity.month:
+        return _aggregateByMonth();
+      case ZeatMapGranularity.year:
+        return _aggregateByYear();
     }
   }
 
-  /// Scroll to the next month (within current year)
-  void scrollToNextMonth() {
-    if (hasNextMonth) {
-      int nextMonth = currentMonth + 1;
-      scrollToMonth(nextMonth, currentYear);
+  List<DateTime> _aggregateByWeek() {
+    if (widget.dates.isEmpty) return [];
+
+    final Map<int, DateTime> weekStartDates = {};
+    for (var date in widget.dates) {
+      final weekStart = date.subtract(Duration(days: date.weekday - 1));
+      final weekKey = weekStart.millisecondsSinceEpoch;
+      if (!weekStartDates.containsKey(weekKey)) {
+        weekStartDates[weekKey] = weekStart;
+      }
+    }
+
+    return weekStartDates.values.toList()..sort();
+  }
+
+  List<DateTime> _aggregateByMonth() {
+    if (widget.dates.isEmpty) return [];
+
+    final Map<int, DateTime> monthStartDates = {};
+    for (var date in widget.dates) {
+      final monthStart = DateTime(date.year, date.month, 1);
+      final monthKey = monthStart.millisecondsSinceEpoch;
+      if (!monthStartDates.containsKey(monthKey)) {
+        monthStartDates[monthKey] = monthStart;
+      }
+    }
+
+    return monthStartDates.values.toList()..sort();
+  }
+
+  List<DateTime> _aggregateByYear() {
+    if (widget.dates.isEmpty) return [];
+
+    final Map<int, DateTime> yearStartDates = {};
+    for (var date in widget.dates) {
+      final yearStart = DateTime(date.year, 1, 1);
+      final yearKey = yearStart.millisecondsSinceEpoch;
+      if (!yearStartDates.containsKey(yearKey)) {
+        yearStartDates[yearKey] = yearStart;
+      }
+    }
+
+    return yearStartDates.values.toList()..sort();
+  }
+
+  /// Generates the appropriate date label based on granularity.
+  /// For example, shows day number for daily view, week number for weekly view.
+  String getDateLabel(DateTime date) {
+    switch (widget.granularity) {
+      case ZeatMapGranularity.day:
+        return DateFormat('d').format(date);
+      case ZeatMapGranularity.week:
+        return 'W${getWeekNumber(date)}';
+      case ZeatMapGranularity.month:
+        return DateFormat('MMM').format(date);
+      case ZeatMapGranularity.year:
+        return date.year.toString();
+    }
+  }
+
+  /// Formats date for tooltip display based on granularity.
+  /// Provides more detailed date information when hovering over cells.
+  String getTooltipDateFormat(DateTime date) {
+    switch (widget.granularity) {
+      case ZeatMapGranularity.day:
+        return DateFormat('EEEE, MMMM d, yyyy').format(date);
+      case ZeatMapGranularity.week:
+        final weekEnd = date.add(const Duration(days: 6));
+        return '${DateFormat('MMM d').format(date)} - ${DateFormat('MMM d, yyyy').format(weekEnd)}';
+      case ZeatMapGranularity.month:
+        return DateFormat('MMMM yyyy').format(date);
+      case ZeatMapGranularity.year:
+        return DateFormat('yyyy').format(date);
     }
   }
 
@@ -288,6 +668,10 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
     );
   }
 
+  /// Builds the header section of the heatmap including:
+  /// - Title
+  /// - Current period navigation
+  /// - Year dropdown (if enabled)
   Widget _generateHeader() {
     return Padding(
       padding: const EdgeInsets.all(8.0),
@@ -304,7 +688,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
           Row(
             children: [
               Tooltip(
-                message: "Go to current month",
+                message: "Go to current date",
                 child: IconButton(
                   icon: const Icon(Icons.calendar_today),
                   onPressed: scrollToCurrentMonth,
@@ -328,28 +712,30 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
                     }
                   },
                 ),
-              // Month navigation
+              // Period navigation based on granularity
               Tooltip(
-                message: "Go to previous month",
+                message:
+                    "Go to previous ${widget.granularity.toString().split('.').last}",
                 child: IconButton(
                   icon: const Icon(Icons.chevron_left),
-                  onPressed: hasPreviousMonth ? scrollToPreviousMonth : null,
+                  onPressed: hasPrevious ? navigateToPrevious : null,
                 ),
               ),
-              // Date display section with month and year
-              Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Text(DateFormat("MMMM")
-                      .format(DateTime(currentYear, currentMonth))),
-                ],
+              // Date display section showing appropriate label based on granularity
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 8.0),
+                child: Text(
+                  headerDateText,
+                  style: const TextStyle(fontWeight: FontWeight.w500),
+                ),
               ),
-              // Month navigation
+              // Period navigation based on granularity
               Tooltip(
-                message: "Go to next month",
+                message:
+                    "Go to next ${widget.granularity.toString().split('.').last}",
                 child: IconButton(
                   icon: const Icon(Icons.chevron_right),
-                  onPressed: hasNextMonth ? scrollToNextMonth : null,
+                  onPressed: hasNext ? navigateToNext : null,
                 ),
               ),
             ],
@@ -359,6 +745,8 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
     );
   }
 
+  /// Builds the legend section below the heatmap.
+  /// Shows color indicators with labels if legend items are provided.
   Widget _generateLegend() {
     return widget.showLegend && widget.legendItems.isNotEmpty
         ? Padding(
@@ -404,7 +792,10 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
     }
   }
 
+  /// Builds the main data grid of the heatmap.
+  /// This includes all the cells representing data points.
   Expanded _generateDataGrid(BuildContext context) {
+    final dates = aggregatedDates;
     return Expanded(
       child: SingleChildScrollView(
         controller: _scrollController,
@@ -420,7 +811,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
             _generateDateRowDay(context),
             ...List.generate(widget.rowHeaders.length, (rowIndex) {
               return Row(
-                children: List.generate(widget.dates.length, (columnIndex) {
+                children: List.generate(dates.length, (columnIndex) {
                   ZeatMapItem<T> item = widget.itemBuilder != null
                       ? widget.itemBuilder!(rowIndex, columnIndex)
                       : _defaultItemBuilder(rowIndex, columnIndex);
@@ -470,10 +861,12 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   }
 
   Widget _generateDateRowDay(BuildContext context) {
-    return widget.showDay
+    final dates = aggregatedDates;
+    // Only show day row if granularity is day
+    return widget.showDay && widget.granularity == ZeatMapGranularity.day
         ? Row(
-            children: List.generate(widget.dates.length, (index) {
-              DateTime currentDate = widget.dates[index];
+            children: List.generate(dates.length, (index) {
+              DateTime currentDate = dates[index];
               bool isToday = DateTime(
                       currentDate.year, currentDate.month, currentDate.day) ==
                   DateTime(DateTime.now().year, DateTime.now().month,
@@ -492,7 +885,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
                     ? widget.dayBuilder!(currentDate)
                     : Center(
                         child: Text(
-                          DateFormat('d').format(currentDate),
+                          getDateLabel(currentDate),
                           style: widget.highlightToday && isToday
                               ? const TextStyle(
                                   fontWeight: FontWeight.bold,
@@ -512,18 +905,22 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   }
 
   Widget _generateDateRowWeek() {
-    return widget.showWeek
+    final dates = aggregatedDates;
+    // Only show week row if granularity is day or week
+    return widget.showWeek &&
+            widget.granularity.index <= ZeatMapGranularity.week.index
         ? Row(
-            children: List.generate(widget.dates.length, (index) {
+            children: List.generate(dates.length, (index) {
               return Padding(
                 padding: EdgeInsets.only(left: widget.columnSpacing),
                 child: SizedBox(
                   height: widget.itemSize,
                   width: widget.itemSize,
-                  child: widget.dates[index].weekday == DateTime.monday
+                  child: widget.granularity == ZeatMapGranularity.week ||
+                          (dates[index].weekday == DateTime.monday)
                       ? Center(
                           child: Text(
-                            "W${getWeekNumber(widget.dates[index])}",
+                            "W${getWeekNumber(dates[index])}",
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
@@ -537,18 +934,22 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   }
 
   Widget _generateDateRowMonth() {
-    return widget.showMonth
+    final dates = aggregatedDates;
+    // Only show month row if granularity is day, week, or month
+    return widget.showMonth &&
+            widget.granularity.index <= ZeatMapGranularity.month.index
         ? Row(
-            children: List.generate(widget.dates.length, (index) {
+            children: List.generate(dates.length, (index) {
               return Padding(
                 padding: EdgeInsets.only(left: widget.columnSpacing),
                 child: SizedBox(
                   height: widget.itemSize,
                   width: widget.itemSize,
-                  child: widget.dates[index].day == 1
+                  child: widget.granularity == ZeatMapGranularity.month ||
+                          (dates[index].day == 1)
                       ? Center(
                           child: Text(
-                            DateFormat('MMM').format(widget.dates[index]),
+                            DateFormat('MMM').format(dates[index]),
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
@@ -562,19 +963,21 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   }
 
   Widget _generateDateRowYear() {
+    final dates = aggregatedDates;
+    // Always show year row
     return widget.showYear
         ? Row(
-            children: List.generate(widget.dates.length, (index) {
+            children: List.generate(dates.length, (index) {
               return Padding(
                 padding: EdgeInsets.only(left: widget.columnSpacing),
                 child: SizedBox(
                   height: widget.itemSize,
                   width: widget.itemSize,
-                  child: widget.dates[index].month == 1 &&
-                          widget.dates[index].day == 1
+                  child: widget.granularity == ZeatMapGranularity.year ||
+                          (dates[index].month == 1 && dates[index].day == 1)
                       ? Center(
                           child: Text(
-                            DateFormat('yyyy').format(widget.dates[index]),
+                            DateFormat('yyyy').format(dates[index]),
                             overflow: TextOverflow.ellipsis,
                             style: const TextStyle(fontWeight: FontWeight.bold),
                           ),
@@ -615,25 +1018,103 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
 
   ZeatMapItem<T> _defaultItemBuilder(int rowIndex, int columnIndex) {
     T data = widget.rowHeaders[rowIndex];
-    DateTime date = widget.dates[columnIndex];
-    Color color =
-        date.weekday == DateTime.saturday || date.weekday == DateTime.sunday
-            ? const Color.fromARGB(110, 255, 131, 131)
-            : const Color.fromARGB(110, 221, 221, 221);
+    final dates = aggregatedDates;
+    if (columnIndex >= dates.length) {
+      return ZeatMapItem(
+        ZeatMapPosition(rowIndex, columnIndex),
+        rowData: data,
+        color: Colors.grey[300]!,
+      );
+    }
+
+    DateTime date = dates[columnIndex];
+    Color color = _getDefaultColorForPeriod(date);
+
+    final tooltipWidget = Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(data.toString()),
+          Text("Date: ${getTooltipDateFormat(date)}"),
+        ],
+      ),
+    );
+
     return ZeatMapItem(
       ZeatMapPosition(rowIndex, columnIndex),
       rowData: data,
       color: color,
       date: date,
+      tooltipWidget: tooltipWidget,
     );
   }
 
+  Color _getDefaultColorForPeriod(DateTime startDate) {
+    switch (widget.granularity) {
+      case ZeatMapGranularity.day:
+        return startDate.weekday == DateTime.saturday ||
+                startDate.weekday == DateTime.sunday
+            ? const Color.fromARGB(110, 255, 131, 131)
+            : const Color.fromARGB(110, 221, 221, 221);
+
+      case ZeatMapGranularity.week:
+        // Check if any day in the week is a weekend
+        bool hasWeekend = false;
+        for (int i = 0; i < 7; i++) {
+          final date = startDate.add(Duration(days: i));
+          if (date.weekday == DateTime.saturday ||
+              date.weekday == DateTime.sunday) {
+            hasWeekend = true;
+            break;
+          }
+        }
+        return hasWeekend
+            ? const Color.fromARGB(110, 255, 180, 180)
+            : const Color.fromARGB(110, 221, 221, 221);
+
+      case ZeatMapGranularity.month:
+        // Count weekend days in the month
+        final daysInMonth =
+            DateTime(startDate.year, startDate.month + 1, 0).day;
+        int weekendDays = 0;
+        for (int i = 1; i <= daysInMonth; i++) {
+          final date = DateTime(startDate.year, startDate.month, i);
+          if (date.weekday == DateTime.saturday ||
+              date.weekday == DateTime.sunday) {
+            weekendDays++;
+          }
+        }
+        // Normalize weekend ratio to determine color intensity
+        final weekendRatio = weekendDays / daysInMonth;
+        return Color.fromARGB(
+          110,
+          221 + ((255 - 221) * weekendRatio).round(),
+          221 - (90 * weekendRatio).round(),
+          221 - (90 * weekendRatio).round(),
+        );
+
+      case ZeatMapGranularity.year:
+        // Use a neutral color for year view
+        return const Color.fromARGB(110, 221, 221, 221);
+    }
+  }
+
+  /// Calculates the number of active date label rows based on:
+  /// - Which label rows are enabled (day, week, month, year)
+  /// - Current granularity setting
   int get numberOfActiveDateRows {
     int activeRows = 0;
+    // Only count rows that are visible based on granularity
     if (widget.showYear) activeRows++;
-    if (widget.showMonth) activeRows++;
-    if (widget.showWeek) activeRows++;
-    if (widget.showDay) activeRows++;
+    if (widget.showMonth &&
+        widget.granularity.index <= ZeatMapGranularity.month.index)
+      activeRows++;
+    if (widget.showWeek &&
+        widget.granularity.index <= ZeatMapGranularity.week.index) activeRows++;
+    if (widget.showDay && widget.granularity == ZeatMapGranularity.day)
+      activeRows++;
     return activeRows;
   }
 
