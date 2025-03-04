@@ -1107,14 +1107,20 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   int get numberOfActiveDateRows {
     int activeRows = 0;
     // Only count rows that are visible based on granularity
-    if (widget.showYear) activeRows++;
+    if (widget.showYear) {
+      activeRows++;
+    }
     if (widget.showMonth &&
-        widget.granularity.index <= ZeatMapGranularity.month.index)
+        widget.granularity.index <= ZeatMapGranularity.month.index) {
       activeRows++;
+    }
     if (widget.showWeek &&
-        widget.granularity.index <= ZeatMapGranularity.week.index) activeRows++;
-    if (widget.showDay && widget.granularity == ZeatMapGranularity.day)
+        widget.granularity.index <= ZeatMapGranularity.week.index) {
       activeRows++;
+    }
+    if (widget.showDay && widget.granularity == ZeatMapGranularity.day) {
+      activeRows++;
+    }
     return activeRows;
   }
 
