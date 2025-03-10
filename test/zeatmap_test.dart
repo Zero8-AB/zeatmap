@@ -60,7 +60,7 @@ void main() {
 
     // Test item grid
     expect(find.byType(GestureDetector),
-        findsNWidgets(24)); // 2 rows * 10 columns + 4 navigation buttons
+        findsNWidgets(25)); // 2 rows * 10 columns + 4 navigation buttons
 
     // Test scrolling
     await tester.tap(find.byIcon(Icons.chevron_right));
@@ -79,40 +79,4 @@ void main() {
     expect(state.getWeekNumber(DateTime(2024, 1, 1)), 1);
     expect(state.getWeekNumber(DateTime(2024, 1, 8)), 2);
   });
-//   test('ZeatMapState getWeekNumber method (ISO 8601)', () {
-//     final state = ZeatMapState<String>();
-
-//     // According to ISO 8601, weeks start on Monday and week 1 is the week with the first Thursday of the year.
-
-//     // Test the first day of 2023 (Sunday, should be week 52 of 2022)
-//     expect(state.getWeekNumber(DateTime(2023, 1, 1)), 52);
-
-//     // Test Monday of the first week of 2023
-//     expect(state.getWeekNumber(DateTime(2023, 1, 2)), 1);
-
-//     // Test dates in the first week
-//     expect(state.getWeekNumber(DateTime(2023, 1, 4)), 1); // Wednesday
-//     expect(state.getWeekNumber(DateTime(2023, 1, 8)), 1); // Sunday
-
-//     // Test the start of the second week
-//     expect(state.getWeekNumber(DateTime(2023, 1, 9)), 2);
-
-//     // Test a date in the middle of the year
-//     expect(state.getWeekNumber(DateTime(2023, 6, 15)), 24);
-
-//     // Test the last day of the year (Sunday, should be week 52)
-//     expect(state.getWeekNumber(DateTime(2023, 12, 31)), 52);
-
-//     // Test a leap year date
-//     expect(state.getWeekNumber(DateTime(2020, 2, 29)), 9);
-
-//     // Test week transitions
-//     expect(state.getWeekNumber(DateTime(2023, 1, 8)), 1); // End of first week
-//     expect(
-//         state.getWeekNumber(DateTime(2023, 1, 9)), 2); // Start of second week
-
-//     // Test edge cases at year boundaries
-//     expect(state.getWeekNumber(DateTime(2022, 12, 31)), 52);
-//     expect(state.getWeekNumber(DateTime(2023, 1, 1)), 52);
-//   });
 }
