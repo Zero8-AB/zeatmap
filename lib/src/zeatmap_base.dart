@@ -189,11 +189,19 @@ class ZeatMap<T> extends StatefulWidget {
   }
 }
 
+// Add the drag gesture variables to the ZeatMapState class
 class ZeatMapState<T> extends State<ZeatMap<T>> {
   final ScrollController _scrollController = ScrollController();
   late int currentMonth;
   late int currentYear;
   late List<int> _availableYears;
+
+  // Variables for handling drag gesture
+  double? _dragStartPosition;
+  double? _dragStartScrollOffset;
+  Offset? _lastDragPosition;
+  double _dragVelocity = 0;
+  bool _isDragging = false;
 
   /// Get the text to display in the header's date label based on granularity
   String get headerDateText {
@@ -831,66 +839,187 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   Expanded _generateDataGrid(BuildContext context) {
     final dates = aggregatedDates;
     return Expanded(
-      child: SingleChildScrollView(
-        controller: _scrollController,
-        scrollDirection: Axis.horizontal,
-        physics: widget.scrollingEnabled
-            ? const AlwaysScrollableScrollPhysics()
-            : const NeverScrollableScrollPhysics(),
-        child: Column(
-          children: [
-            _generateDateRowYear(),
-            _generateDateRowMonth(),
-            _generateDateRowWeek(),
-            _generateDateRowDay(context),
-            ...List.generate(widget.rowHeaders.length, (rowIndex) {
-              return Row(
-                children: List.generate(dates.length, (columnIndex) {
-                  ZeatMapItem<T> item = widget.itemBuilder != null
-                      ? widget.itemBuilder!(rowIndex, columnIndex)
-                      : _defaultItemBuilder(rowIndex, columnIndex);
+      child: widget.scrollingEnabled
+          ? GestureDetector(
+              onHorizontalDragStart: (details) {
+                _dragStartPosition = details.localPosition.dx;
+                _dragStartScrollOffset = _scrollController.offset;
+                _lastDragPosition = details.localPosition;
+                _isDragging = true;
+              },
+              onHorizontalDragUpdate: (details) {
+                if (_isDragging &&
+                    _dragStartPosition != null &&
+                    _dragStartScrollOffset != null) {
+                  final double dragDistance =
+                      _dragStartPosition! - details.localPosition.dx;
+                  final double targetOffset =
+                      _dragStartScrollOffset! + dragDistance;
+                  if (targetOffset >= 0 &&
+                      targetOffset <=
+                          _scrollController.position.maxScrollExtent) {
+                    _scrollController.jumpTo(targetOffset);
+                  }
 
-                  return Padding(
-                    padding: EdgeInsets.only(
-                      top: widget.rowSpacing,
-                      left: widget.columnSpacing,
-                    ),
-                    child: GestureDetector(
-                      onTap: () => widget.onItemTapped?.call(item),
-                      onDoubleTap: () => widget.onItemDoubleTapped?.call(item),
-                      onLongPress: () => widget.onItemLongPressed?.call(item),
-                      onTapDown: (details) => widget.onItemTapDown?.call(item),
-                      onTapCancel: () => widget.onItemTapCancel?.call(item),
-                      child: item.tooltipWidget != null
-                          ? Tooltip(
-                              richMessage:
-                                  WidgetSpan(child: item.tooltipWidget!),
-                              child: Container(
-                                height: widget.itemSize,
-                                width: widget.itemSize,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(
-                                      widget.itemBorderRadius),
-                                  color: item.color,
-                                ),
-                              ))
-                          : Container(
-                              height: widget.itemSize,
-                              width: widget.itemSize,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(
-                                    widget.itemBorderRadius),
-                                color: item.color,
-                              ),
+                  // Calculate velocity for possible inertia scrolling
+                  if (_lastDragPosition != null) {
+                    final double distance =
+                        details.localPosition.dx - _lastDragPosition!.dx;
+                    _dragVelocity = distance;
+                  }
+                  _lastDragPosition = details.localPosition;
+                }
+              },
+              onHorizontalDragEnd: (details) {
+                if (_isDragging) {
+                  // Apply inertia scrolling with velocity from drag
+                  if (_dragVelocity.abs() > 5) {
+                    final targetOffset =
+                        _scrollController.offset - (_dragVelocity * 2.0);
+                    if (targetOffset >= 0 &&
+                        targetOffset <=
+                            _scrollController.position.maxScrollExtent) {
+                      _scrollController.animateTo(
+                        targetOffset,
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.decelerate,
+                      );
+                    }
+                  }
+                  _isDragging = false;
+                  _dragStartPosition = null;
+                  _dragStartScrollOffset = null;
+                  _lastDragPosition = null;
+                }
+              },
+              child: SingleChildScrollView(
+                controller: _scrollController,
+                scrollDirection: Axis.horizontal,
+                // Allow normal scrolling physics so both scrolling methods work together
+                physics: const AlwaysScrollableScrollPhysics(),
+                child: Column(
+                  children: [
+                    _generateDateRowYear(),
+                    _generateDateRowMonth(),
+                    _generateDateRowWeek(),
+                    _generateDateRowDay(context),
+                    ...List.generate(widget.rowHeaders.length, (rowIndex) {
+                      return Row(
+                        children: List.generate(dates.length, (columnIndex) {
+                          ZeatMapItem<T> item = widget.itemBuilder != null
+                              ? widget.itemBuilder!(rowIndex, columnIndex)
+                              : _defaultItemBuilder(rowIndex, columnIndex);
+
+                          return Padding(
+                            padding: EdgeInsets.only(
+                              top: widget.rowSpacing,
+                              left: widget.columnSpacing,
                             ),
-                    ),
-                  );
-                }),
-              );
-            }),
-          ],
-        ),
-      ),
+                            child: GestureDetector(
+                              onTap: () => widget.onItemTapped?.call(item),
+                              onDoubleTap: () =>
+                                  widget.onItemDoubleTapped?.call(item),
+                              onLongPress: () =>
+                                  widget.onItemLongPressed?.call(item),
+                              onTapDown: (details) =>
+                                  widget.onItemTapDown?.call(item),
+                              onTapCancel: () =>
+                                  widget.onItemTapCancel?.call(item),
+                              child: item.tooltipWidget != null
+                                  ? Tooltip(
+                                      richMessage: WidgetSpan(
+                                          child: item.tooltipWidget!),
+                                      child: Container(
+                                        height: widget.itemSize,
+                                        width: widget.itemSize,
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                              widget.itemBorderRadius),
+                                          color: item.color,
+                                        ),
+                                      ))
+                                  : Container(
+                                      height: widget.itemSize,
+                                      width: widget.itemSize,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(
+                                            widget.itemBorderRadius),
+                                        color: item.color,
+                                      ),
+                                    ),
+                            ),
+                          );
+                        }),
+                      );
+                    }),
+                  ],
+                ),
+              ),
+            )
+          : SingleChildScrollView(
+              controller: _scrollController,
+              scrollDirection: Axis.horizontal,
+              physics: widget.scrollingEnabled
+                  ? const AlwaysScrollableScrollPhysics()
+                  : const NeverScrollableScrollPhysics(),
+              child: Column(
+                children: [
+                  _generateDateRowYear(),
+                  _generateDateRowMonth(),
+                  _generateDateRowWeek(),
+                  _generateDateRowDay(context),
+                  ...List.generate(widget.rowHeaders.length, (rowIndex) {
+                    return Row(
+                      children: List.generate(dates.length, (columnIndex) {
+                        ZeatMapItem<T> item = widget.itemBuilder != null
+                            ? widget.itemBuilder!(rowIndex, columnIndex)
+                            : _defaultItemBuilder(rowIndex, columnIndex);
+
+                        return Padding(
+                          padding: EdgeInsets.only(
+                            top: widget.rowSpacing,
+                            left: widget.columnSpacing,
+                          ),
+                          child: GestureDetector(
+                            onTap: () => widget.onItemTapped?.call(item),
+                            onDoubleTap: () =>
+                                widget.onItemDoubleTapped?.call(item),
+                            onLongPress: () =>
+                                widget.onItemLongPressed?.call(item),
+                            onTapDown: (details) =>
+                                widget.onItemTapDown?.call(item),
+                            onTapCancel: () =>
+                                widget.onItemTapCancel?.call(item),
+                            child: item.tooltipWidget != null
+                                ? Tooltip(
+                                    richMessage:
+                                        WidgetSpan(child: item.tooltipWidget!),
+                                    child: Container(
+                                      height: widget.itemSize,
+                                      width: widget.itemSize,
+                                      decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(
+                                            widget.itemBorderRadius),
+                                        color: item.color,
+                                      ),
+                                    ))
+                                : Container(
+                                    height: widget.itemSize,
+                                    width: widget.itemSize,
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(
+                                          widget.itemBorderRadius),
+                                      color: item.color,
+                                    ),
+                                  ),
+                          ),
+                        );
+                      }),
+                    );
+                  }),
+                ],
+              ),
+            ),
     );
   }
 
