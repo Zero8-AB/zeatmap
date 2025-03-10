@@ -673,75 +673,109 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   /// - Current period navigation
   /// - Year dropdown (if enabled)
   Widget _generateHeader() {
-    return Padding(
-      padding: const EdgeInsets.all(8.0),
-      child: Row(
-        mainAxisAlignment: MainAxisAlignment.spaceBetween,
-        children: [
-          Text(
-            widget.headerTitle ?? 'ZeatMap',
-            style: const TextStyle(
-              fontSize: 20,
-              fontWeight: FontWeight.bold,
-            ),
+    return LayoutBuilder(
+      builder: (context, constraints) {
+        // Determine if we should use a stacked layout based on available width
+        // Use stacked layout if width is below 480 logical pixels
+        final useStackedLayout = constraints.maxWidth < 480;
+
+        // Build the header title
+        final headerTitle = Text(
+          widget.headerTitle ?? 'ZeatMap',
+          style: const TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.bold,
           ),
-          Row(
-            children: [
-              Tooltip(
-                message: "Go to current date",
-                child: IconButton(
-                  icon: const Icon(Icons.calendar_today),
-                  onPressed: scrollToCurrentMonth,
-                ),
+        );
+
+        // Build the navigation controls
+        final navigationControls = Wrap(
+          alignment:
+              useStackedLayout ? WrapAlignment.center : WrapAlignment.end,
+          crossAxisAlignment: WrapCrossAlignment.center,
+          children: [
+            Tooltip(
+              message: "Go to current date",
+              child: IconButton(
+                icon: const Icon(Icons.calendar_today),
+                onPressed: scrollToCurrentMonth,
               ),
-              // Year dropdown - conditionally shown
-              if (widget.showYearDropdown)
-                DropdownButton<int>(
-                  value: _availableYears.contains(currentYear)
-                      ? currentYear
-                      : _availableYears.first,
-                  items: _availableYears
-                      .map((year) => DropdownMenuItem(
-                            value: year,
-                            child: Text(year.toString()),
-                          ))
-                      .toList(),
-                  onChanged: (year) {
-                    if (year != null) {
-                      _setYear(year);
-                    }
-                  },
-                ),
-              // Period navigation based on granularity
-              Tooltip(
-                message:
-                    "Go to previous ${widget.granularity.toString().split('.').last}",
-                child: IconButton(
-                  icon: const Icon(Icons.chevron_left),
-                  onPressed: hasPrevious ? navigateToPrevious : null,
-                ),
+            ),
+            // Year dropdown - conditionally shown
+            if (widget.showYearDropdown)
+              DropdownButton<int>(
+                value: _availableYears.contains(currentYear)
+                    ? currentYear
+                    : _availableYears.first,
+                items: _availableYears
+                    .map((year) => DropdownMenuItem(
+                          value: year,
+                          child: Text(year.toString()),
+                        ))
+                    .toList(),
+                onChanged: (year) {
+                  if (year != null) {
+                    _setYear(year);
+                  }
+                },
               ),
-              // Date display section showing appropriate label based on granularity
-              Padding(
-                padding: const EdgeInsets.symmetric(horizontal: 8.0),
-                child: Text(
-                  headerDateText,
-                  style: const TextStyle(fontWeight: FontWeight.w500),
-                ),
+            // Period navigation based on granularity
+            Tooltip(
+              message:
+                  "Go to previous ${widget.granularity.toString().split('.').last}",
+              child: IconButton(
+                icon: const Icon(Icons.chevron_left),
+                onPressed: hasPrevious ? navigateToPrevious : null,
               ),
-              // Period navigation based on granularity
-              Tooltip(
-                message:
-                    "Go to next ${widget.granularity.toString().split('.').last}",
-                child: IconButton(
-                  icon: const Icon(Icons.chevron_right),
-                  onPressed: hasNext ? navigateToNext : null,
-                ),
+            ),
+            // Date display section showing appropriate label based on granularity
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8.0),
+              child: Text(
+                headerDateText,
+                style: const TextStyle(fontWeight: FontWeight.w500),
               ),
-            ],
-          )
-        ],
-      ),
+            ),
+            // Period navigation based on granularity
+            Tooltip(
+              message:
+                  "Go to next ${widget.granularity.toString().split('.').last}",
+              child: IconButton(
+                icon: const Icon(Icons.chevron_right),
+                onPressed: hasNext ? navigateToNext : null,
+              ),
+            ),
+          ],
+        );
+
+        // Build layout based on available width
+        if (useStackedLayout) {
+          // Stacked layout for small screens
+          return Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.center,
+              children: [
+                headerTitle,
+                const SizedBox(height: 8.0),
+                navigationControls,
+              ],
+            ),
+          );
+        } else {
+          // Side-by-side layout for larger screens
+          return Padding(
+            padding: const EdgeInsets.all(8.0),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                headerTitle,
+                navigationControls,
+              ],
+            ),
+          );
+        }
+      },
     );
   }
 

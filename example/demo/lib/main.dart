@@ -85,6 +85,7 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
     return Column(
       children: [
         Expanded(
+          flex: 3, // Give the ZeatMap more space
           child: ZeatMap<String>(
             dates: dates,
             rowHeaders: rowHeaders,
@@ -113,13 +114,20 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
             },
           ),
         ),
-        _buildControlPanel(),
+        Expanded(
+          flex:
+              2, // Allow the control panel to have some space but less than the map
+          child: SingleChildScrollView(
+            child: _buildControlPanel(),
+          ),
+        ),
       ],
     );
   }
 
   Widget _buildControlPanel() {
     return Container(
+      width: double.infinity, // Make the panel use full available width
       padding: const EdgeInsets.all(16.0),
       decoration: BoxDecoration(
         color: Colors.grey[200],
@@ -130,6 +138,7 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min, // Only take needed space
         children: [
           const Text(
             'ZeatMap Controls',
