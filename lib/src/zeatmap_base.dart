@@ -227,31 +227,26 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
 
   /// Check if previous navigation is available based on granularity
   bool get hasPrevious {
-    switch (widget.granularity) {
-      case ZeatMapGranularity.day:
-        return _currentDayIndex > 0;
-      case ZeatMapGranularity.week:
-        return _currentWeekIndex > 0;
-      case ZeatMapGranularity.month:
-        return currentMonth > 1;
-      case ZeatMapGranularity.year:
-        return _availableYears.indexOf(currentYear) > 0;
+    if (_availableYears.isEmpty) return false;
+
+    // If we're in January of the first available year, there's no previous month
+    if (currentMonth == 1 && currentYear == _availableYears.first) {
+      return false;
     }
+
+    return true;
   }
 
   /// Check if next navigation is available based on granularity
   bool get hasNext {
-    switch (widget.granularity) {
-      case ZeatMapGranularity.day:
-        return _currentDayIndex < widget.dates.length - 1;
-      case ZeatMapGranularity.week:
-        return _currentWeekIndex < _aggregateByWeek().length - 1;
-      case ZeatMapGranularity.month:
-        return currentMonth < 12;
-      case ZeatMapGranularity.year:
-        return _availableYears.indexOf(currentYear) <
-            _availableYears.length - 1;
+    if (_availableYears.isEmpty) return false;
+
+    // If we're in December of the last available year, there's no next month
+    if (currentMonth == 12 && currentYear == _availableYears.last) {
+      return false;
     }
+
+    return true;
   }
 
   // Additional navigation properties for days
@@ -306,17 +301,39 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   }
 
   void scrollToPreviousMonth() {
-    if (currentMonth > 1) {
-      int previousMonth = currentMonth - 1;
-      scrollToMonth(previousMonth, currentYear);
+    int previousMonth = currentMonth - 1;
+    int previousYear = currentYear;
+
+    // If we're at January, go to December of the previous year
+    if (previousMonth < 1) {
+      previousMonth = 12;
+      previousYear--;
+
+      // Check if the previous year is available
+      if (!_availableYears.contains(previousYear)) {
+        return;
+      }
     }
+
+    scrollToMonth(previousMonth, previousYear);
   }
 
   void scrollToNextMonth() {
-    if (currentMonth < 12) {
-      int nextMonth = currentMonth + 1;
-      scrollToMonth(nextMonth, currentYear);
+    int nextMonth = currentMonth + 1;
+    int nextYear = currentYear;
+
+    // If we're at December, go to January of the next year
+    if (nextMonth > 12) {
+      nextMonth = 1;
+      nextYear++;
+
+      // Check if the next year is available
+      if (!_availableYears.contains(nextYear)) {
+        return;
+      }
     }
+
+    scrollToMonth(nextMonth, nextYear);
   }
 
   void scrollToPreviousYear() {
@@ -363,37 +380,13 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   }
 
   void navigateToPrevious() {
-    switch (widget.granularity) {
-      case ZeatMapGranularity.day:
-        scrollToPreviousDay();
-        break;
-      case ZeatMapGranularity.week:
-        scrollToPreviousWeek();
-        break;
-      case ZeatMapGranularity.month:
-        scrollToPreviousMonth();
-        break;
-      case ZeatMapGranularity.year:
-        scrollToPreviousYear();
-        break;
-    }
+    // Always navigate by month, regardless of granularity
+    scrollToPreviousMonth();
   }
 
   void navigateToNext() {
-    switch (widget.granularity) {
-      case ZeatMapGranularity.day:
-        scrollToNextDay();
-        break;
-      case ZeatMapGranularity.week:
-        scrollToNextWeek();
-        break;
-      case ZeatMapGranularity.month:
-        scrollToNextMonth();
-        break;
-      case ZeatMapGranularity.year:
-        scrollToNextYear();
-        break;
-    }
+    // Always navigate by month, regardless of granularity
+    scrollToNextMonth();
   }
 
   @override
@@ -703,7 +696,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
           crossAxisAlignment: WrapCrossAlignment.center,
           children: [
             Tooltip(
-              message: "Go to current date",
+              message: "Go to current month",
               child: IconButton(
                 icon: const Icon(Icons.calendar_today),
                 onPressed: scrollToCurrentMonth,
@@ -727,10 +720,9 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
                   }
                 },
               ),
-            // Period navigation based on granularity
+            // Always navigate by month
             Tooltip(
-              message:
-                  "Go to previous ${widget.granularity.toString().split('.').last}",
+              message: "Previous month",
               child: IconButton(
                 icon: const Icon(Icons.chevron_left),
                 onPressed: hasPrevious ? navigateToPrevious : null,
@@ -744,10 +736,9 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
                 style: const TextStyle(fontWeight: FontWeight.w500),
               ),
             ),
-            // Period navigation based on granularity
+            // Always navigate by month
             Tooltip(
-              message:
-                  "Go to next ${widget.granularity.toString().split('.').last}",
+              message: "Next month",
               child: IconButton(
                 icon: const Icon(Icons.chevron_right),
                 onPressed: hasNext ? navigateToNext : null,
