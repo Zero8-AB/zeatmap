@@ -1,18 +1,32 @@
 # ZeatMap
 
-ZeatMap is a Flutter package for creating customizable heatmaps with support for various date ranges and interactive features.
+[![pub package](https://img.shields.io/pub/v/zeatmap.svg)](https://pub.dev/packages/zeatmap)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
+
+A highly customizable Flutter heatmap widget for visualizing data across date ranges. Create interactive heatmaps with support for custom layouts, date navigation, and interactive features.
+
+![ZeatMap Example](https://via.placeholder.com/800x400?text=ZeatMap+Screenshot)
 
 ## Features
 
-- Display data in a heatmap format with customizable rows and columns.
-- Scroll to specific months or dates.
-- Highlight the current day.
-- Show legends for different data categories.
-- Interactive items with tap, double-tap, long-press, and other gestures.
+- ✅ Flexible heatmap layouts with customizable rows and columns
+- ✅ Date-based visualization with day, week, month, and year views
+- ✅ Interactive cells with support for tap, double-tap, and long-press gestures
+- ✅ Customizable legends for data categories
+- ✅ Automatic highlighting of the current day
+- ✅ Smooth scrolling through date ranges
+- ✅ Fully customizable appearance including colors, spacing, and sizing
 
 ## Installation
 
-Add the following to your `pubspec.yaml` file:
+Add ZeatMap to your `pubspec.yaml` file:
+
+```yaml
+dependencies:
+  zeatmap: ^0.1.0
+```
+
+Or use the following for the latest development version:
 
 ```yaml
 dependencies:
@@ -22,126 +36,222 @@ dependencies:
       ref: main
 ```
 
-Then run `flutter pub get` to install the package.
+Then run:
 
-## Usage
+```bash
+flutter pub get
+```
 
-Basic Example
+## Quick Start
 
 ```dart
 import 'package:flutter/material.dart';
 import 'package:zeatmap/zeatmap.dart';
-import 'package:zeatmap/zeatmap_item.dart';
-import 'package:zeatmap/zeatmap_position.dart';
-import 'package:zeatmap/zeat_map_legend_item.dart';
 
-void main() {
-  runApp(MyApp());
-}
-
-class MyApp extends StatelessWidget {
+class SimpleHeatmapExample extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      home: Scaffold(
-        appBar: AppBar(title: Text('ZeatMap Example')),
-        body: ZeatMapExample(),
-      ),
-    );
-  }
-}
-
-class ZeatMapExample extends StatelessWidget {
-  @override
-  Widget build(BuildContext context) {
+    // Generate dates for the past year
     final dates = List<DateTime>.generate(
       365,
-      (index) => DateTime.now().subtract(Duration(days: index)),
-    ).reversed.toList();
-
-    final rowHeaders = ['Row 1', 'Row 2', 'Row 3'];
-
-    final legendItems = [
-      ZeatMapLegendItem(Colors.red, 'High'),
-      ZeatMapLegendItem(Colors.yellow, 'Medium'),
-      ZeatMapLegendItem(Colors.green, 'Low'),
-    ];
-
-    return ZeatMap<String>(
-      dates: dates,
-      rowHeaders: rowHeaders,
-      rowHeaderBuilder: (rowData) => Text(rowData),
-      itemBuilder: (rowIndex, columnIndex) {
-        final position = ZeatMapPosition(rowIndex, columnIndex);
-        final date = dates[columnIndex];
-        final color = rowIndex == 0
-            ? Colors.red
-            : rowIndex == 1
-                ? Colors.yellow
-                : Colors.green;
-        return ZeatMapItem<String>(
-          position,
-          rowData: rowHeaders[rowIndex],
-          color: color,
-          date: date,
-        );
-      },
-      legendItems: legendItems,
-      headerTitle: 'ZeatMap Example',
+      (index) => DateTime.now().subtract(Duration(days: 365 - index)),
+    );
+    
+    // Define row headers
+    final rowHeaders = ['Project A', 'Project B', 'Project C'];
+    
+    return Scaffold(
+      appBar: AppBar(title: Text('ZeatMap Example')),
+      body: Padding(
+        padding: EdgeInsets.all(16.0),
+        child: ZeatMap<String>(
+          dates: dates,
+          rowHeaders: rowHeaders,
+          rowHeaderBuilder: (rowData) => Text(
+            rowData,
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          itemBuilder: (rowIndex, columnIndex) {
+            // Generate sample heatmap data
+            final value = (rowIndex * columnIndex) % 3;
+            final color = value == 0 
+                ? Colors.green.shade300
+                : value == 1 
+                    ? Colors.orange.shade300 
+                    : Colors.red.shade300;
+            
+            return ZeatMapItem(
+              ZeatMapPosition(rowIndex, columnIndex),
+              rowData: rowHeaders[rowIndex],
+              color: color,
+              date: dates[columnIndex],
+              tooltipWidget: Text('Value: $value'),
+            );
+          },
+          legendItems: [
+            ZeatMapLegendItem(Colors.green.shade300, 'Low'),
+            ZeatMapLegendItem(Colors.orange.shade300, 'Medium'),
+            ZeatMapLegendItem(Colors.red.shade300, 'High'),
+          ],
+          headerTitle: 'Activity Heatmap',
+          onItemTapped: (item) => print('Tapped: ${item.date}, ${item.rowData}'),
+        ),
+      ),
     );
   }
 }
 ```
 
-## API
+## Advanced Usage
+
+### Custom Date Navigation
+
+ZeatMap provides built-in navigation controls, but you can also programmatically control the view:
+
+```dart
+// Reference to the ZeatMap state
+final zeatmapKey = GlobalKey<ZeatMapState>();
+
+// Later in your code:
+zeatmapKey.currentState?.scrollToMonth(DateTime(2024, 1));
+zeatmapKey.currentState?.scrollToToday();
+```
+
+### Customizing Appearance
+
+```dart
+ZeatMap<String>(
+  // Basic configuration
+  dates: dates,
+  rowHeaders: rowHeaders,
+  rowHeaderBuilder: (data) => Text(data),
+  itemBuilder: itemBuilder,
+  
+  // Styling options
+  itemSize: 24.0,
+  itemBorderRadius: 6.0,
+  rowSpacing: 8.0,
+  columnSpacing: 4.0,
+  
+  // Visibility options
+  showDay: true,
+  showMonth: true,
+  showWeek: false,
+  showYear: true,
+  showLegend: true,
+  highlightToday: true,
+)
+```
+
+### Interactive Features
+
+```dart
+ZeatMap<String>(
+  // Basic configuration...
+  
+  // Interaction callbacks
+  onItemTapped: (item) {
+    showDialog(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: Text('Item Selected'),
+        content: Text('Date: ${item.date}, Row: ${item.rowData}'),
+      ),
+    );
+  },
+  onItemLongPressed: (item) {
+    // Handle long press
+  },
+  onItemDoubleTapped: (item) {
+    // Handle double tap
+  },
+)
+```
+
+## API Reference
 
 ### ZeatMap
-| Function | Type | Description |
-| --- | --- | --- |
-| `dates` | `List<DateTime>` | List of dates to display in the heatmap. |
-| `rowHeaders` | `List<T>` | List of row headers. |
-| `rowHeaderBuilder` | `Widget Function(T rowData)` | Builder function for row headers. |
+
+| Parameter | Type | Description |
+|---|---|---|
+| `dates` | `List<DateTime>` | **Required**. List of dates to display in the heatmap. |
+| `rowHeaders` | `List<T>` | **Required**. List of row headers. |
+| `rowHeaderBuilder` | `Widget Function(T rowData)` | **Required**. Builder function for row headers. |
 | `itemBuilder` | `ZeatMapItem<T> Function(int rowIndex, int columnIndex)?` | Builder function for heatmap items. |
 | `dayBuilder` | `Container Function(DateTime date)?` | Builder function for day cells. |
-| `legendItems` | `List<ZeatMapLegendItem>` | List of legend items. |
+| `legendItems` | `List<ZeatMapLegendItem>?` | List of legend items. |
 | `headerTitle` | `String?` | Title for the heatmap header. |
-| `showDay` | `bool` | Whether to show day labels. |
-| `showWeek` | `bool` | Whether to show week labels. |
-| `showMonth` | `bool` | Whether to show month labels. |
-| `showYear` | `bool` | Whether to show year labels. |
-| `highlightToday` | `bool` | Whether to highlight the current day. |
-| `showLegend` | `bool` | Whether to show the legend. |
-| `rowSpacing` | `double` | Spacing between rows. |
-| `columnSpacing` | `double` | Spacing between columns. |
-| `itemSize` | `double` | Size of each heatmap item. |
-| `itemBorderRadius` | `double` | Border radius of each heatmap item. |
-| `onItemTapped` | `void Function(ZeatMapItem<T> item)?` | Callback for item tap gesture. |
-| `onItemLongPressed` | `void Function(ZeatMapItem<T> item)?` | Callback for item long press gesture. |
-| `onItemDoubleTapped` | `void Function(ZeatMapItem<T> item)?` | Callback for item double tap gesture. |
-| `onItemTapDown` | `void Function(ZeatMapItem<T> item)?` | Callback for item tap down gesture. |
-| `onItemTapCancel` | `void Function(ZeatMapItem<T> item)?` | Callback for item tap cancel gesture. |
+| `showDay` | `bool` | Whether to show day labels. Default: `true` |
+| `showWeek` | `bool` | Whether to show week labels. Default: `true` |
+| `showMonth` | `bool` | Whether to show month labels. Default: `true` |
+| `showYear` | `bool` | Whether to show year labels. Default: `true` |
+| `highlightToday` | `bool` | Whether to highlight the current day. Default: `true` |
+| `showLegend` | `bool` | Whether to show the legend. Default: `true` |
+| `rowSpacing` | `double` | Spacing between rows. Default: `4.0` |
+| `columnSpacing` | `double` | Spacing between columns. Default: `2.0` |
+| `itemSize` | `double` | Size of each heatmap item. Default: `16.0` |
+| `itemBorderRadius` | `double` | Border radius of heatmap items. Default: `4.0` |
+| `onItemTapped` | `void Function(ZeatMapItem<T> item)?` | Callback when item is tapped. |
+| `onItemLongPressed` | `void Function(ZeatMapItem<T> item)?` | Callback when item is long-pressed. |
+| `onItemDoubleTapped` | `void Function(ZeatMapItem<T> item)?` | Callback when item is double-tapped. |
+| `onItemTapDown` | `void Function(ZeatMapItem<T> item)?` | Callback when tap starts on item. |
+| `onItemTapCancel` | `void Function(ZeatMapItem<T> item)?` | Callback when tap is canceled. |
 
 ### ZeatMapItem
-| Property       | Type              | Description                          |
-| -------------- | ----------------- | ------------------------------------ |
-| `position`     | `ZeatMapPosition` | Position of the item in the grid.    |
-| `rowData`      | `T?`              | Data associated with the row.        |
-| `color`        | `Color?`          | Color of the item.                   |
-| `date`         | `DateTime?`       | Date associated with the item.       |
-| `extraData`    | `dynamic`         | Additional data for the item.        |
-| `tooltipWidget`| `Widget?`         | Widget to display as a tooltip.      |
+
+| Property | Type | Description |
+|---|---|---|
+| `position` | `ZeatMapPosition` | **Required**. Position of the item in the grid. |
+| `rowData` | `T?` | Data associated with the row. |
+| `color` | `Color?` | Color of the item. |
+| `date` | `DateTime?` | Date associated with the item. |
+| `extraData` | `dynamic` | Additional data for the item. |
+| `tooltipWidget` | `Widget?` | Widget to display as a tooltip. |
 
 ### ZeatMapLegendItem
-| Property | Type   | Description            |
-| -------- | ------ | ---------------------- |
-| `color`  | `Color`| Color of the legend.   |
-| `label`  | `String`| Label for the legend. |
+
+| Property | Type | Description |
+|---|---|---|
+| `color` | `Color` | **Required**. Color of the legend. |
+| `label` | `String` | **Required**. Label for the legend. |
 
 ### ZeatMapPosition
-| Property | Type  | Description            |
-| -------- | ----- | ---------------------- |
-| `x`      | `int` | X-coordinate position. |
-| `y`      | `int` | Y-coordinate position. |
+
+| Property | Type | Description |
+|---|---|---|
+| `x` | `int` | X-coordinate position. |
+| `y` | `int` | Y-coordinate position. |
+
+## Compatibility
+
+ZeatMap is compatible with:
+
+* Flutter 2.5.0 or higher
+* Dart 2.14.0 or higher
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Items not appearing**: Ensure your `itemBuilder` is properly returning `ZeatMapItem` objects for each position.
+2. **Date navigation issues**: Verify that your `dates` list contains valid `DateTime` objects in chronological order.
+
+### Getting Help
+
+If you encounter any issues or have questions, please:
+
+1. Check the [GitHub Issues](https://github.com/Zero8-AB/zeatmap/issues) for similar problems
+2. Open a new issue with a detailed description and reproduction steps
+
+## Contributing
+
+Contributions are welcome! Please feel free to submit a Pull Request.
+
+1. Fork the repository
+2. Create your feature branch (`git checkout -b feature/amazing-feature`)
+3. Commit your changes (`git commit -m 'Add some amazing feature'`)
+4. Push to the branch (`git push origin feature/amazing-feature`)
+5. Open a Pull Request
 
 ## License
 
