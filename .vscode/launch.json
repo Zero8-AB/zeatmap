@@ -7,7 +7,8 @@
         {
             "name": "zeatmap",
             "request": "launch",
-            "type": "dart"
+            "type": "dart",
+            "program": "example/demo/lib/main.dart"
         },
         {
             "name": "zeatmap (profile mode)",
@@ -20,6 +21,27 @@
             "request": "launch",
             "type": "dart",
             "flutterMode": "release"
+        }
+    ],
+    "settings": [
+        {
+            "description": "The **workbench.externalBrowser** setting controls which browser is used for opening external links. Set it to 'chrome' to use Chrome.",
+            "details": {
+                "key": "workbench.externalBrowser",
+                "value": "chrome"
+            }
+        },
+        {
+            "type": "setting",
+            "description": "For Dart/Flutter projects, the **dart.devToolsBrowser** setting configures which browser to use for DevTools windows.",
+            "details": {
+                "key": "dart.devToolsBrowser",
+                "value": "chrome"
+            }
+        },
+        {
+            "type": "other",
+            "description": "After applying these settings, when you run your application from Codespaces, web links will open in Chrome."
         }
     ]
 }
