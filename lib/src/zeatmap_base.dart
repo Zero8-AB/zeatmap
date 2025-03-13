@@ -56,7 +56,7 @@ class ZeatMap<T> extends StatefulWidget {
   /// Size of each cell in the heatmap grid.
   final double itemSize;
 
-  /// Border radius for each cell in the grid.
+  /// The border radius of each item.
   final double itemBorderRadius;
 
   /// Whether to show the day labels above the heatmap.
@@ -107,8 +107,15 @@ class ZeatMap<T> extends StatefulWidget {
   /// Background color of the card containing the heatmap.
   final Color? cardColor;
 
-  /// Whether horizontal scrolling is enabled on the heatmap.
+  /// Whether normal scrolling with mouse wheel or touch swipe is enabled.
+  /// This controls the standard ScrollView physics.
+  /// Set to false to disable normal scrolling behavior.
   final bool scrollingEnabled;
+
+  /// Whether drag-to-scroll is enabled.
+  /// This controls the ability to click and drag the heatmap horizontally.
+  /// Can be enabled independently from normal scrolling.
+  final bool dragToScrollEnabled;
 
   /// Optional list of years to show in the dropdown.
   /// If not provided, years will be extracted from dates.
@@ -162,6 +169,7 @@ class ZeatMap<T> extends StatefulWidget {
     this.itemSize = 30,
     this.itemBorderRadius = 5.0,
     this.scrollingEnabled = true,
+    this.dragToScrollEnabled = true,
     this.onItemTapped,
     this.onItemLongPressed,
     this.onItemDoubleTapped,
@@ -830,64 +838,73 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   Expanded _generateDataGrid(BuildContext context) {
     final dates = aggregatedDates;
     return Expanded(
-      child: widget.scrollingEnabled
+      child: (widget.scrollingEnabled || widget.dragToScrollEnabled)
           ? GestureDetector(
-              onHorizontalDragStart: (details) {
-                _dragStartPosition = details.localPosition.dx;
-                _dragStartScrollOffset = _scrollController.offset;
-                _lastDragPosition = details.localPosition;
-                _isDragging = true;
-              },
-              onHorizontalDragUpdate: (details) {
-                if (_isDragging &&
-                    _dragStartPosition != null &&
-                    _dragStartScrollOffset != null) {
-                  final double dragDistance =
-                      _dragStartPosition! - details.localPosition.dx;
-                  final double targetOffset =
-                      _dragStartScrollOffset! + dragDistance;
-                  if (targetOffset >= 0 &&
-                      targetOffset <=
-                          _scrollController.position.maxScrollExtent) {
-                    _scrollController.jumpTo(targetOffset);
-                  }
-
-                  // Calculate velocity for possible inertia scrolling
-                  if (_lastDragPosition != null) {
-                    final double distance =
-                        details.localPosition.dx - _lastDragPosition!.dx;
-                    _dragVelocity = distance;
-                  }
-                  _lastDragPosition = details.localPosition;
-                }
-              },
-              onHorizontalDragEnd: (details) {
-                if (_isDragging) {
-                  // Apply inertia scrolling with velocity from drag
-                  if (_dragVelocity.abs() > 5) {
-                    final targetOffset =
-                        _scrollController.offset - (_dragVelocity * 2.0);
-                    if (targetOffset >= 0 &&
-                        targetOffset <=
-                            _scrollController.position.maxScrollExtent) {
-                      _scrollController.animateTo(
-                        targetOffset,
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.decelerate,
-                      );
+              // Only enable drag gestures if dragToScrollEnabled is true
+              onHorizontalDragStart: widget.dragToScrollEnabled
+                  ? (details) {
+                      _dragStartPosition = details.localPosition.dx;
+                      _dragStartScrollOffset = _scrollController.offset;
+                      _lastDragPosition = details.localPosition;
+                      _isDragging = true;
                     }
-                  }
-                  _isDragging = false;
-                  _dragStartPosition = null;
-                  _dragStartScrollOffset = null;
-                  _lastDragPosition = null;
-                }
-              },
+                  : null,
+              onHorizontalDragUpdate: widget.dragToScrollEnabled
+                  ? (details) {
+                      if (_isDragging &&
+                          _dragStartPosition != null &&
+                          _dragStartScrollOffset != null) {
+                        final double dragDistance =
+                            _dragStartPosition! - details.localPosition.dx;
+                        final double targetOffset =
+                            _dragStartScrollOffset! + dragDistance;
+                        if (targetOffset >= 0 &&
+                            targetOffset <=
+                                _scrollController.position.maxScrollExtent) {
+                          _scrollController.jumpTo(targetOffset);
+                        }
+
+                        // Calculate velocity for possible inertia scrolling
+                        if (_lastDragPosition != null) {
+                          final double distance =
+                              details.localPosition.dx - _lastDragPosition!.dx;
+                          _dragVelocity = distance;
+                        }
+                        _lastDragPosition = details.localPosition;
+                      }
+                    }
+                  : null,
+              onHorizontalDragEnd: widget.dragToScrollEnabled
+                  ? (details) {
+                      if (_isDragging) {
+                        // Apply inertia scrolling with velocity from drag
+                        if (_dragVelocity.abs() > 5) {
+                          final targetOffset =
+                              _scrollController.offset - (_dragVelocity * 2.0);
+                          if (targetOffset >= 0 &&
+                              targetOffset <=
+                                  _scrollController.position.maxScrollExtent) {
+                            _scrollController.animateTo(
+                              targetOffset,
+                              duration: const Duration(milliseconds: 300),
+                              curve: Curves.decelerate,
+                            );
+                          }
+                        }
+                        _isDragging = false;
+                        _dragStartPosition = null;
+                        _dragStartScrollOffset = null;
+                        _lastDragPosition = null;
+                      }
+                    }
+                  : null,
               child: SingleChildScrollView(
                 controller: _scrollController,
                 scrollDirection: Axis.horizontal,
-                // Allow normal scrolling physics so both scrolling methods work together
-                physics: const AlwaysScrollableScrollPhysics(),
+                // Only enable scroll physics if scrollingEnabled is true
+                physics: widget.scrollingEnabled
+                    ? const AlwaysScrollableScrollPhysics()
+                    : const NeverScrollableScrollPhysics(),
                 child: Column(
                   children: [
                     _generateDateRowYear(),

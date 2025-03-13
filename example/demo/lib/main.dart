@@ -59,6 +59,7 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
 
   // ZeatMap configuration options
   bool _scrollingEnabled = false;
+  bool _dragToScrollEnabled = true;
   bool _showDay = true;
   bool _showWeek = false;
   bool _showMonth = true;
@@ -159,6 +160,7 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
       ),
       rowHeaderWidth: 100,
       scrollingEnabled: _scrollingEnabled,
+      dragToScrollEnabled: _dragToScrollEnabled,
       showDay: _showDay,
       showWeek: _showWeek,
       showMonth: _showMonth,
@@ -212,8 +214,11 @@ class _ZeatMapExampleState extends State<ZeatMapExample> {
       children: [
         _buildControlGroup('View Options', [
           _buildGranularityControl(),
-          _buildToggle('Scrolling', _scrollingEnabled, (value) {
+          _buildToggle('Normal Scrolling', _scrollingEnabled, (value) {
             setState(() => _scrollingEnabled = value);
+          }),
+          _buildToggle('Drag to Scroll', _dragToScrollEnabled, (value) {
+            setState(() => _dragToScrollEnabled = value);
           }),
         ]),
         _buildControlGroup('Header Options', [

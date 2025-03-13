@@ -23,7 +23,7 @@ Add ZeatMap to your `pubspec.yaml` file:
 
 ```yaml
 dependencies:
-  zeatmap: ^0.1.0
+  zeatmap: ^0.2.0
 ```
 
 Or use the following for the latest development version:
@@ -143,6 +143,18 @@ ZeatMap<String>(
 )
 ```
 
+### Scrolling Options
+
+```dart
+ZeatMap<String>(
+  // Basic configuration...
+  
+  // Scrolling options
+  scrollingEnabled: true,  // Enable/disable normal scrolling with mouse wheel or touch swipe
+  dragToScrollEnabled: true,  // Enable/disable click and drag scrolling
+)
+```
+
 ### Interactive Features
 
 ```dart
@@ -191,6 +203,8 @@ ZeatMap<String>(
 | `columnSpacing` | `double` | Spacing between columns. Default: `2.0` |
 | `itemSize` | `double` | Size of each heatmap item. Default: `16.0` |
 | `itemBorderRadius` | `double` | Border radius of heatmap items. Default: `4.0` |
+| `scrollingEnabled` | `bool` | Whether normal scrolling with mouse wheel or touch swipe is enabled. Default: `true` |
+| `dragToScrollEnabled` | `bool` | Whether drag-to-scroll is enabled (click and drag horizontally). Default: `true` |
 | `onItemTapped` | `void Function(ZeatMapItem<T> item)?` | Callback when item is tapped. |
 | `onItemLongPressed` | `void Function(ZeatMapItem<T> item)?` | Callback when item is long-pressed. |
 | `onItemDoubleTapped` | `void Function(ZeatMapItem<T> item)?` | Callback when item is double-tapped. |
