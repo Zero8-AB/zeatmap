@@ -1,3 +1,10 @@
+## [0.2.1](https://github.com/Zero8-AB/zeatmap/compare/v0.2.0...v0.2.1) (2025-03-18)
+
+
+### Bug Fixes
+
+* Enhance development guidelines and update package dependencies in pubspec.lock ([512d199](https://github.com/Zero8-AB/zeatmap/commit/512d199885ee8f1a5c2e9b224dfb77eba2c364a4))
+
 # Changelog
 
 All notable changes to the ZeatMap package will be documented in this file.
