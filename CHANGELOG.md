@@ -1,3 +1,10 @@
+## [0.2.2](https://github.com/Zero8-AB/zeatmap/compare/v0.2.1...v0.2.2) (2025-03-18)
+
+
+### Bug Fixes
+
+* Update branch triggers in GitHub Actions workflow to include 'master' ([f574977](https://github.com/Zero8-AB/zeatmap/commit/f574977867ef9566bf4586ca58cdf0574d305576))
+
 ## [0.2.1](https://github.com/Zero8-AB/zeatmap/compare/v0.2.0...v0.2.1) (2025-03-18)
 
 
