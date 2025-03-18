@@ -17,7 +17,7 @@ jobs:
         with:
           flutter-version: '3.24.4'
       
-      - name: Install dependencies
+      - name: Install Flutter dependencies
         run: flutter pub get
       
       - name: Setup Node.js
@@ -25,8 +25,8 @@ jobs:
         with:
           node-version: 20
       
-      - name: Install dependencies
-        run: npm ci
+      - name: Install Node.js dependencies
+        run: npm install
       
       - name: Release
         env:
