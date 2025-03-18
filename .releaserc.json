@@ -7,11 +7,11 @@
     [
       "semantic-release-pub",
       {
-        "publishPub": false
-      },
-      {
+        "publishPub": false,
         "cli": "flutter"
-      },
+      }
+    ],
+    [
       "@semantic-release/git",
       {
         "assets": ["pubspec.yaml", "CHANGELOG.md"],
@@ -19,6 +19,5 @@
       }
     ],
     "@semantic-release/github"
-    
   ]
 }
