@@ -4,8 +4,14 @@
     "@semantic-release/commit-analyzer",
     "@semantic-release/release-notes-generator",
     "@semantic-release/changelog",
-    "semantic-release-pub",
     [
+      "semantic-release-pub",
+      {
+        "publishPub": false
+      },
+      {
+        "cli": "flutter"
+      },
       "@semantic-release/git",
       {
         "assets": ["pubspec.yaml", "CHANGELOG.md"],
@@ -13,5 +19,6 @@
       }
     ],
     "@semantic-release/github"
+    
   ]
 }
