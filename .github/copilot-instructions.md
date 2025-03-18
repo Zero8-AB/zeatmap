@@ -52,16 +52,30 @@ ZeatMap is a Flutter package for creating highly customizable heatmaps with supp
 
 ## Version Control Practices
 - Use feature branches for development
-- Follow [Conventional Commits](https://www.conventionalcommits.org/) format
+- Follow [Conventional Commits](https://www.conventionalcommits.org/) format for all commits
+  - `feat`: New feature (minor version bump)
+  - `fix`: Bug fix (patch version bump)
+  - `docs`: Documentation changes (no version bump)
+  - `chore`: Routine tasks (no version bump)
+  - `refactor`: Code changes that neither fix a bug nor add a feature (no version bump)
+  - Include `BREAKING CHANGE:` in the footer for major version bumps
 - Keep commits focused on single responsibilities
 - Rebase feature branches on main before merging
 
-## Package Publishing
-- Update version in pubspec.yaml following semantic versioning
-- Update CHANGELOG.md with appropriate sections (Added, Changed, Fixed)
-- Run final tests and analysis before publishing
-- Use `flutter pub publish --dry-run` to validate package
-- Publish with `flutter pub publish`
+## Package Publishing & Semantic Versioning
+- The package uses automated semantic versioning with [semantic-release-pub](https://github.com/zeshuaro/semantic-release-pub)
+- Version numbers are automatically determined based on commit messages
+- GitHub Actions workflow automatically:
+  - Analyzes commit messages to determine version number
+  - Updates version in pubspec.yaml
+  - Updates CHANGELOG.md
+  - Creates a Git tag and GitHub release
+- For manual verification before merging to main:
+  - Run final tests and analysis before publishing
+  - Use `flutter pub publish --dry-run` to validate package
+- When ready to publish to pub.dev:
+  - Generate pub.dev credentials and add as GitHub secret `PUB_CREDENTIALS`
+  - Uncomment `PUB_CREDENTIALS` line in `.github/workflows/release.yml`
 
 ## Performance Considerations
 - Optimize rendering for large datasets
