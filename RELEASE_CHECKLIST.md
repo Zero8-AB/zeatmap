@@ -1,37 +1,55 @@
-# Release Checklist for ZeatMap v0.2.0
+# Release Process for ZeatMap
 
-## Pre-release Checks
+## Automated Semantic Versioning Process
+
+ZeatMap now uses semantic versioning with automated releases using the [semantic-release-pub](https://github.com/zeshuaro/semantic-release-pub) plugin.
+
+### How It Works
+
+1. When code is merged to the `main` or `master` branch, the GitHub Actions workflow automatically:
+   - Analyzes commit messages
+   - Determines the next version number
+   - Updates the CHANGELOG.md
+   - Updates the version in pubspec.yaml
+   - Creates a GitHub release
+   - Tags the release in Git
+
+### Commit Message Format
+
+Follow the [Conventional Commits](https://www.conventionalcommits.org/) specification for all commit messages:
+
+```
+<type>(<scope>): <description>
+```
+
+Common types:
+- `feat`: New feature (minor version bump)
+- `fix`: Bug fix (patch version bump)
+- `docs`: Documentation changes (no version bump)
+- `chore`: Routine tasks (no version bump)
+- `refactor`: Code changes that neither fix a bug nor add a feature (no version bump)
+
+For breaking changes, include `BREAKING CHANGE:` in the footer of the commit message (major version bump).
+
+### Manual Release Checklist
+
+For manual verification before merging to main:
+
 - [ ] All code changes are complete and tested
+- [ ] All tests pass: `flutter test`
+- [ ] Code analysis passes: `flutter analyze`
 - [ ] Documentation is updated (README.md, code comments)
-- [ ] CHANGELOG.md is updated with all changes
-- [ ] Version number is updated in pubspec.yaml (0.2.0)
 - [ ] Example app works with the new features
 
-## Release Process
-1. Commit all changes with the message from release_message.txt:
-   ```
-   git add .
-   git commit -m "Release v0.2.0: Add separate controls for drag-to-scroll and normal scrolling"
-   ```
+## Publishing to pub.dev
 
-2. Create a git tag for the release:
-   ```
-   git tag -a v0.2.0 -m "Version 0.2.0"
-   ```
+The automated publishing to pub.dev is currently disabled. To publish manually after a release:
 
-3. Push changes and tags:
-   ```
-   git push origin main
-   git push origin --tags
-   ```
+```
+flutter pub publish
+```
 
-4. Publish to pub.dev (if applicable):
-   ```
-   flutter pub publish
-   ```
+In the future, to enable automated publishing:
 
-## Post-release
-- [ ] Verify the package is available on pub.dev
-- [ ] Create a GitHub release with release notes
-- [ ] Announce the release to users/stakeholders
-- [ ] Start planning for the next release
+1. Generate pub.dev credentials and add them as a GitHub secret named `PUB_CREDENTIALS`
+2. Uncomment the `PUB_CREDENTIALS` environment variable in the `.github/workflows/release.yml` file

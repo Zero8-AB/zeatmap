@@ -27,3 +27,10 @@ migrate_working_dir/
 **/doc/api/
 .dart_tool/
 build/
+
+# Node.js related
+node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+package-lock.json
