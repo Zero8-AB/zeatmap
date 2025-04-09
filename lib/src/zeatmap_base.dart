@@ -329,6 +329,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
 
   /// Scroll to a specific date
   void scrollToDate(DateTime date) {
+    if (!mounted) return;
     final dates = widget.dates;
     final targetIndex = dates.indexWhere(
       (d) => d.year == date.year && d.month == date.month && d.day == date.day,
@@ -345,7 +346,9 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
         curve: Curves.easeInOut,
       )
           .then((_) {
+        if (!mounted) return;
         SchedulerBinding.instance.addPostFrameCallback((_) {
+          if (!mounted) return;
           setState(() {
             _currentDayIndex = targetIndex;
           });
@@ -439,6 +442,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
 
     // Scroll to the initialized month and year
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       scrollToMonth(currentMonth, currentYear);
     });
   }
@@ -454,6 +458,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
 
     // Automatically scroll to currentMonth when widget updates (e.g., new dates provided)
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
       scrollToMonth(currentMonth, currentYear);
     });
   }
@@ -504,6 +509,8 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
 
   /// Method to scroll to the beginning of a specific month
   void scrollToMonth(int month, int year) {
+    if (!mounted) return;
+
     // Locate the date in the list
     final targetDate = widget.dates.firstWhere(
       (date) => date.month == month && date.year == year,
@@ -514,6 +521,8 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
     int targetIndex = widget.dates.indexOf(targetDate);
     double offset = targetIndex * (widget.itemSize + widget.columnSpacing);
 
+    if (!_scrollController.hasClients) return;
+
     // Scroll to the calculated offset with animation
     _scrollController
         .animateTo(
@@ -522,8 +531,10 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
       curve: Curves.easeInOut,
     )
         .then((_) {
+      if (!mounted) return;
       // Update the state after the scroll animation completes
       SchedulerBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
         setState(() {
           currentMonth = month;
           currentYear = year;
@@ -534,6 +545,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
 
   /// Scroll to the current month
   void scrollToCurrentMonth() {
+    if (!mounted) return;
     var now = DateTime.now();
     // Check if today's year is in the available years
     if (_availableYears.contains(now.year)) {
