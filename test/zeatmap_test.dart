@@ -78,5 +78,9 @@ void main() {
 
     expect(state.getWeekNumber(DateTime(2024, 1, 1)), 1);
     expect(state.getWeekNumber(DateTime(2024, 1, 8)), 2);
+    // Dates at the start of the year that belong to the previous year's last week
+    expect(state.getWeekNumber(DateTime(2023, 1, 1)), 52);
+    // Last days of the year can belong to the first week of the next year
+    expect(state.getWeekNumber(DateTime(2020, 12, 31)), 53);
   });
 }

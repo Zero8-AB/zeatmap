@@ -1317,12 +1317,21 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   ///
   /// Returns an integer representing the week number.
   int getWeekNumber(DateTime date) {
-    // ISO 8601 week date system
-    // Week starts on Monday and the first week of the year contains the first Thursday
-    final firstDayOfYear = DateTime(date.year, 1, 1);
-    final firstThursday = firstDayOfYear
-        .add(Duration(days: (4 - firstDayOfYear.weekday + 7) % 7));
-    final weekNumber = ((date.difference(firstThursday).inDays) / 7).ceil() + 1;
+    // ISO 8601 week date system implementation
+    // Normalize to UTC to avoid timezone issues
+    DateTime d = DateTime.utc(date.year, date.month, date.day);
+
+    // In ISO 8601, week starts on Monday (1) and Sunday is 7
+    int dayNum = d.weekday == DateTime.sunday ? 7 : d.weekday;
+
+    // Shift date to the Thursday of the current week
+    d = d.add(Duration(days: 4 - dayNum));
+
+    // First week of the year is the one that contains January 4th
+    DateTime yearStart = DateTime.utc(d.year, 1, 1);
+
+    // Calculate week number
+    int weekNumber = ((d.difference(yearStart).inDays + 1) / 7).ceil();
     return weekNumber;
   }
 }
