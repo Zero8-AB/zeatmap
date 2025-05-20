@@ -113,7 +113,8 @@ ZeatMap provides built-in navigation controls, but you can also programmatically
 final zeatmapKey = GlobalKey<ZeatMapState>();
 
 // Later in your code:
-zeatmapKey.currentState?.scrollToMonth(DateTime(2024, 1));
+zeatmapKey.currentState?.scrollToMonth(1, 2024);
+// Use `scrollToDate(DateTime(2024, 1, 1))` if you need to target an exact day.
 zeatmapKey.currentState?.scrollToToday();
 ```
 
