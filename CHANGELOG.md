@@ -1,3 +1,10 @@
+## [0.2.5](https://github.com/Zero8-AB/zeatmap/compare/v0.2.4...v0.2.5) (2025-05-27)
+
+
+### Bug Fixes
+
+* fix ([7687a7f](https://github.com/Zero8-AB/zeatmap/commit/7687a7fa89893477deaa5a9f8cd5ea44a4ebe42f))
+
 ## [0.2.4](https://github.com/Zero8-AB/zeatmap/compare/v0.2.3...v0.2.4) (2025-05-27)
 
 
