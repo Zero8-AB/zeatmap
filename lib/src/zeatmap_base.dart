@@ -850,198 +850,171 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   Expanded _generateDataGrid(BuildContext context) {
     final dates = aggregatedDates;
     return Expanded(
-      child: (widget.scrollingEnabled || widget.dragToScrollEnabled)
-          ? GestureDetector(
-              // Only enable drag gestures if dragToScrollEnabled is true
-              onHorizontalDragStart: widget.dragToScrollEnabled
-                  ? (details) {
-                      _dragStartPosition = details.localPosition.dx;
-                      _dragStartScrollOffset = _scrollController.offset;
-                      _lastDragPosition = details.localPosition;
-                      _isDragging = true;
-                    }
-                  : null,
-              onHorizontalDragUpdate: widget.dragToScrollEnabled
-                  ? (details) {
-                      if (_isDragging &&
-                          _dragStartPosition != null &&
-                          _dragStartScrollOffset != null) {
-                        final double dragDistance =
-                            _dragStartPosition! - details.localPosition.dx;
-                        final double targetOffset =
-                            _dragStartScrollOffset! + dragDistance;
-                        if (targetOffset >= 0 &&
-                            targetOffset <=
-                                _scrollController.position.maxScrollExtent) {
-                          _scrollController.jumpTo(targetOffset);
-                        }
-
-                        // Calculate velocity for possible inertia scrolling
-                        if (_lastDragPosition != null) {
-                          final double distance =
-                              details.localPosition.dx - _lastDragPosition!.dx;
-                          _dragVelocity = distance;
-                        }
-                        _lastDragPosition = details.localPosition;
-                      }
-                    }
-                  : null,
-              onHorizontalDragEnd: widget.dragToScrollEnabled
-                  ? (details) {
-                      if (_isDragging) {
-                        // Apply inertia scrolling with velocity from drag
-                        if (_dragVelocity.abs() > 5) {
-                          final targetOffset =
-                              _scrollController.offset - (_dragVelocity * 2.0);
-                          if (targetOffset >= 0 &&
-                              targetOffset <=
-                                  _scrollController.position.maxScrollExtent) {
-                            _scrollController.animateTo(
-                              targetOffset,
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.decelerate,
-                            );
-                          }
-                        }
-                        _isDragging = false;
-                        _dragStartPosition = null;
-                        _dragStartScrollOffset = null;
-                        _lastDragPosition = null;
-                      }
-                    }
-                  : null,
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                scrollDirection: Axis.horizontal,
-                // Only enable scroll physics if scrollingEnabled is true
-                physics: widget.scrollingEnabled
-                    ? const AlwaysScrollableScrollPhysics()
-                    : const NeverScrollableScrollPhysics(),
-                child: Column(
-                  children: [
-                    _generateDateRowYear(),
-                    _generateDateRowMonth(),
-                    _generateDateRowWeek(),
-                    _generateDateRowDay(context),
-                    ...List.generate(widget.rowHeaders.length, (rowIndex) {
-                      return Row(
-                        children: List.generate(dates.length, (columnIndex) {
-                          ZeatMapItem<T> item = widget.itemBuilder != null
-                              ? widget.itemBuilder!(rowIndex, columnIndex)
-                              : _defaultItemBuilder(rowIndex, columnIndex);
-
-                          return Padding(
-                            padding: EdgeInsets.only(
-                              top: widget.rowSpacing,
-                              left: widget.columnSpacing,
-                            ),
-                            child: GestureDetector(
-                              onTap: () => widget.onItemTapped?.call(item),
-                              onDoubleTap: () =>
-                                  widget.onItemDoubleTapped?.call(item),
-                              onLongPress: () =>
-                                  widget.onItemLongPressed?.call(item),
-                              onTapDown: (details) =>
-                                  widget.onItemTapDown?.call(item),
-                              onTapCancel: () =>
-                                  widget.onItemTapCancel?.call(item),
-                              child: item.tooltipWidget != null
-                                  ? Tooltip(
-                                      richMessage: WidgetSpan(
-                                          child: item.tooltipWidget!),
-                                      child: Container(
-                                        height: widget.itemSize,
-                                        width: widget.itemSize,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                              widget.itemBorderRadius),
-                                          color: item.color,
-                                        ),
-                                      ))
-                                  : Container(
-                                      height: widget.itemSize,
-                                      width: widget.itemSize,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(
-                                            widget.itemBorderRadius),
-                                        color: item.color,
-                                      ),
-                                    ),
-                            ),
-                          );
-                        }),
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            )
-          : SingleChildScrollView(
-              controller: _scrollController,
-              scrollDirection: Axis.horizontal,
-              physics: widget.scrollingEnabled
-                  ? const AlwaysScrollableScrollPhysics()
-                  : const NeverScrollableScrollPhysics(),
-              child: Column(
-                children: [
-                  _generateDateRowYear(),
-                  _generateDateRowMonth(),
-                  _generateDateRowWeek(),
-                  _generateDateRowDay(context),
-                  ...List.generate(widget.rowHeaders.length, (rowIndex) {
-                    return Row(
-                      children: List.generate(dates.length, (columnIndex) {
-                        ZeatMapItem<T> item = widget.itemBuilder != null
-                            ? widget.itemBuilder!(rowIndex, columnIndex)
-                            : _defaultItemBuilder(rowIndex, columnIndex);
-
-                        return Padding(
-                          padding: EdgeInsets.only(
-                            top: widget.rowSpacing,
-                            left: widget.columnSpacing,
-                          ),
-                          child: GestureDetector(
-                            onTap: () => widget.onItemTapped?.call(item),
-                            onDoubleTap: () =>
-                                widget.onItemDoubleTapped?.call(item),
-                            onLongPress: () =>
-                                widget.onItemLongPressed?.call(item),
-                            onTapDown: (details) =>
-                                widget.onItemTapDown?.call(item),
-                            onTapCancel: () =>
-                                widget.onItemTapCancel?.call(item),
-                            child: item.tooltipWidget != null
-                                ? Tooltip(
-                                    richMessage:
-                                        WidgetSpan(child: item.tooltipWidget!),
-                                    child: Container(
-                                      height: widget.itemSize,
-                                      width: widget.itemSize,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(
-                                            widget.itemBorderRadius),
-                                        color: item.color,
-                                      ),
-                                    ))
-                                : Container(
-                                    height: widget.itemSize,
-                                    width: widget.itemSize,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(
-                                          widget.itemBorderRadius),
-                                      color: item.color,
-                                    ),
-                                  ),
-                          ),
-                        );
-                      }),
-                    );
-                  }),
-                ],
-              ),
-            ),
+      child: _buildOptimizedGrid(context, dates),
     );
   }
+
+  /// Builds an optimized grid that only renders visible items for better performance.
+  Widget _buildOptimizedGrid(BuildContext context, List<DateTime> dates) {
+    Widget scrollableGrid = _buildGridContent(context, dates);
+    
+    // Wrap with drag gesture detection if needed
+    if (widget.dragToScrollEnabled) {
+      scrollableGrid = GestureDetector(
+        onHorizontalDragStart: (details) {
+          _dragStartPosition = details.localPosition.dx;
+          _dragStartScrollOffset = _scrollController.offset;
+          _lastDragPosition = details.localPosition;
+          _isDragging = true;
+        },
+        onHorizontalDragUpdate: (details) {
+          if (_isDragging &&
+              _dragStartPosition != null &&
+              _dragStartScrollOffset != null) {
+            final double dragDistance =
+                _dragStartPosition! - details.localPosition.dx;
+            final double targetOffset =
+                _dragStartScrollOffset! + dragDistance;
+            if (targetOffset >= 0 &&
+                targetOffset <= _scrollController.position.maxScrollExtent) {
+              _scrollController.jumpTo(targetOffset);
+            }
+
+            // Calculate velocity for possible inertia scrolling
+            if (_lastDragPosition != null) {
+              final double distance =
+                  details.localPosition.dx - _lastDragPosition!.dx;
+              _dragVelocity = distance;
+            }
+            _lastDragPosition = details.localPosition;
+          }
+        },
+        onHorizontalDragEnd: (details) {
+          if (_isDragging) {
+            // Apply inertia scrolling with velocity from drag
+            if (_dragVelocity.abs() > 5) {
+              final targetOffset =
+                  _scrollController.offset - (_dragVelocity * 2.0);
+              if (targetOffset >= 0 &&
+                  targetOffset <= _scrollController.position.maxScrollExtent) {
+                _scrollController.animateTo(
+                  targetOffset,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.decelerate,
+                );
+              }
+            }
+            _isDragging = false;
+            _dragStartPosition = null;
+            _dragStartScrollOffset = null;
+            _lastDragPosition = null;
+          }
+        },
+        child: scrollableGrid,
+      );
+    }
+    
+    return scrollableGrid;
+  }
+
+  /// Builds the core grid content with optimized rendering for performance.
+  Widget _buildGridContent(BuildContext context, List<DateTime> dates) {
+    return SingleChildScrollView(
+      controller: _scrollController,
+      scrollDirection: Axis.horizontal,
+      physics: widget.scrollingEnabled
+          ? const AlwaysScrollableScrollPhysics()
+          : const NeverScrollableScrollPhysics(),
+      child: Column(
+        children: [
+          _generateDateRowYear(),
+          _generateDateRowMonth(),
+          _generateDateRowWeek(),
+          _generateDateRowDay(context),
+          Expanded(
+            child: _buildOptimizedRows(context, dates),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Builds optimized rows using ListView.builder for better performance with large datasets.
+  Widget _buildOptimizedRows(BuildContext context, List<DateTime> dates) {
+    final rowHeight = widget.itemSize + widget.rowSpacing;
+    
+    return ListView.builder(
+      itemCount: widget.rowHeaders.length,
+      itemExtent: rowHeight,
+      itemBuilder: (context, rowIndex) {
+        return _buildOptimizedRow(context, dates, rowIndex);
+      },
+    );
+  }
+
+  /// Builds a single optimized row that renders all columns.
+  /// This maintains horizontal scroll synchronization with date headers.
+  Widget _buildOptimizedRow(BuildContext context, List<DateTime> dates, int rowIndex) {
+    return SizedBox(
+      height: widget.itemSize + widget.rowSpacing,
+      child: Row(
+        children: List.generate(dates.length, (columnIndex) {
+          return _buildOptimizedCell(rowIndex, columnIndex, dates);
+        }),
+      ),
+    );
+  }
+
+  /// Builds an optimized grid cell widget with reduced widget tree depth.
+  Widget _buildOptimizedCell(int rowIndex, int columnIndex, List<DateTime> dates) {
+    final item = widget.itemBuilder != null
+        ? widget.itemBuilder!(rowIndex, columnIndex)
+        : _defaultItemBuilder(rowIndex, columnIndex);
+
+    Widget cellWidget = Container(
+      height: widget.itemSize,
+      width: widget.itemSize,
+      margin: EdgeInsets.only(
+        top: widget.rowSpacing,
+        left: widget.columnSpacing,
+      ),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(widget.itemBorderRadius),
+        color: item.color,
+      ),
+    );
+
+    // Add tooltip if present
+    if (item.tooltipWidget != null) {
+      cellWidget = Tooltip(
+        richMessage: WidgetSpan(child: item.tooltipWidget!),
+        child: cellWidget,
+      );
+    }
+
+    // Add gesture detection only if callbacks are provided
+    final hasGestures = widget.onItemTapped != null ||
+        widget.onItemDoubleTapped != null ||
+        widget.onItemLongPressed != null ||
+        widget.onItemTapDown != null ||
+        widget.onItemTapCancel != null;
+
+    if (hasGestures) {
+      cellWidget = GestureDetector(
+        onTap: widget.onItemTapped != null ? () => widget.onItemTapped!(item) : null,
+        onDoubleTap: widget.onItemDoubleTapped != null ? () => widget.onItemDoubleTapped!(item) : null,
+        onLongPress: widget.onItemLongPressed != null ? () => widget.onItemLongPressed!(item) : null,
+        onTapDown: widget.onItemTapDown != null ? (details) => widget.onItemTapDown!(item) : null,
+        onTapCancel: widget.onItemTapCancel != null ? () => widget.onItemTapCancel!(item) : null,
+        child: cellWidget,
+      );
+    }
+
+    return cellWidget;
+  }
+
+  /// Get the computed row height including spacing.
+  double get rowHeight => widget.itemSize + widget.rowSpacing;
 
   Widget _generateDateRowDay(BuildContext context) {
     final dates = aggregatedDates;
