@@ -211,6 +211,14 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   double _dragVelocity = 0;
   bool _isDragging = false;
 
+  // Cache for aggregated dates to avoid recomputation
+  List<DateTime>? _cachedAggregatedDates;
+  ZeatMapGranularity? _cachedGranularity;
+
+  // Cache for visible column range
+  int _visibleStartColumn = 0;
+  int _visibleEndColumn = 0;
+
   /// Get the text to display in the header's date label based on granularity
   String get headerDateText {
     switch (widget.granularity) {
@@ -449,6 +457,9 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
       }
     }
 
+    // Add listener to update visible columns for viewport optimization
+    _scrollController.addListener(_updateVisibleColumns);
+
     // Scroll to the initialized month and year
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -463,6 +474,13 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
     // Recalculate date boundaries if dates changed
     if (oldWidget.dates != widget.dates) {
       _updateDateBoundaries();
+      // Invalidate cached aggregated dates
+      _cachedAggregatedDates = null;
+    }
+
+    // Invalidate cache if granularity changed
+    if (oldWidget.granularity != widget.granularity) {
+      _cachedAggregatedDates = null;
     }
 
     // Automatically scroll to currentMonth when widget updates (e.g., new dates provided)
@@ -474,8 +492,39 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
 
   @override
   void dispose() {
+    _scrollController.removeListener(_updateVisibleColumns);
     _scrollController.dispose();
     super.dispose();
+  }
+
+  /// Updates the visible column range based on the current scroll position.
+  /// This optimization ensures we only render columns visible in the viewport.
+  void _updateVisibleColumns() {
+    if (!_scrollController.hasClients) return;
+
+    final dates = aggregatedDates;
+    if (dates.isEmpty) return;
+
+    final double scrollOffset = _scrollController.offset;
+    final double viewportWidth = _scrollController.position.viewportDimension;
+    final double itemWidth = widget.itemSize + widget.columnSpacing;
+
+    // Calculate visible range with buffer for smoother scrolling
+    const int bufferColumns = 5; // Render a few extra columns for smooth scrolling
+    final int startColumn =
+        ((scrollOffset / itemWidth).floor() - bufferColumns).clamp(0, dates.length - 1);
+    final int endColumn =
+        (((scrollOffset + viewportWidth) / itemWidth).ceil() + bufferColumns)
+            .clamp(0, dates.length);
+
+    // Only trigger rebuild if visible range changed significantly
+    if ((_visibleStartColumn - startColumn).abs() > 2 ||
+        (_visibleEndColumn - endColumn).abs() > 2) {
+      setState(() {
+        _visibleStartColumn = startColumn;
+        _visibleEndColumn = endColumn;
+      });
+    }
   }
 
   /// Update the year boundaries and get all available years from dates
@@ -576,17 +625,32 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
 
   /// Aggregates dates based on the current granularity setting.
   /// Returns a list of representative dates for each time period.
+  /// Results are cached to improve performance.
   List<DateTime> get aggregatedDates {
+    // Return cached value if granularity hasn't changed
+    if (_cachedAggregatedDates != null &&
+        _cachedGranularity == widget.granularity) {
+      return _cachedAggregatedDates!;
+    }
+
+    // Compute and cache the aggregated dates
+    _cachedGranularity = widget.granularity;
     switch (widget.granularity) {
       case ZeatMapGranularity.day:
-        return widget.dates;
+        _cachedAggregatedDates = widget.dates;
+        break;
       case ZeatMapGranularity.week:
-        return _aggregateByWeek();
+        _cachedAggregatedDates = _aggregateByWeek();
+        break;
       case ZeatMapGranularity.month:
-        return _aggregateByMonth();
+        _cachedAggregatedDates = _aggregateByMonth();
+        break;
       case ZeatMapGranularity.year:
-        return _aggregateByYear();
+        _cachedAggregatedDates = _aggregateByYear();
+        break;
     }
+
+    return _cachedAggregatedDates!;
   }
 
   List<DateTime> _aggregateByWeek() {
@@ -829,7 +893,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
               }).toList(),
             ),
           )
-        : Container();
+        : const SizedBox.shrink();
   }
 
   /// Converts the legendPosition enum to a MainAxisAlignment value
@@ -847,12 +911,31 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
 
   /// Builds the main data grid of the heatmap.
   /// This includes all the cells representing data points.
+  /// Uses viewport-aware rendering for improved performance with large datasets.
   Expanded _generateDataGrid(BuildContext context) {
     final dates = aggregatedDates;
+
+    // Build the scrollable content
+    final scrollableContent = SingleChildScrollView(
+      controller: _scrollController,
+      scrollDirection: Axis.horizontal,
+      physics: widget.scrollingEnabled
+          ? const AlwaysScrollableScrollPhysics()
+          : const NeverScrollableScrollPhysics(),
+      child: Column(
+        children: [
+          _generateDateRowYear(),
+          _generateDateRowMonth(),
+          _generateDateRowWeek(),
+          _generateDateRowDay(context),
+          ..._buildDataRows(dates),
+        ],
+      ),
+    );
+
     return Expanded(
       child: (widget.scrollingEnabled || widget.dragToScrollEnabled)
           ? GestureDetector(
-              // Only enable drag gestures if dragToScrollEnabled is true
               onHorizontalDragStart: widget.dragToScrollEnabled
                   ? (details) {
                       _dragStartPosition = details.localPosition.dx;
@@ -910,136 +993,93 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
                       }
                     }
                   : null,
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                scrollDirection: Axis.horizontal,
-                // Only enable scroll physics if scrollingEnabled is true
-                physics: widget.scrollingEnabled
-                    ? const AlwaysScrollableScrollPhysics()
-                    : const NeverScrollableScrollPhysics(),
-                child: Column(
-                  children: [
-                    _generateDateRowYear(),
-                    _generateDateRowMonth(),
-                    _generateDateRowWeek(),
-                    _generateDateRowDay(context),
-                    ...List.generate(widget.rowHeaders.length, (rowIndex) {
-                      return Row(
-                        children: List.generate(dates.length, (columnIndex) {
-                          ZeatMapItem<T> item = widget.itemBuilder != null
-                              ? widget.itemBuilder!(rowIndex, columnIndex)
-                              : _defaultItemBuilder(rowIndex, columnIndex);
+              child: scrollableContent,
+            )
+          : scrollableContent,
+    );
+  }
 
-                          return Padding(
-                            padding: EdgeInsets.only(
-                              top: widget.rowSpacing,
-                              left: widget.columnSpacing,
-                            ),
-                            child: GestureDetector(
-                              onTap: () => widget.onItemTapped?.call(item),
-                              onDoubleTap: () =>
-                                  widget.onItemDoubleTapped?.call(item),
-                              onLongPress: () =>
-                                  widget.onItemLongPressed?.call(item),
-                              onTapDown: (details) =>
-                                  widget.onItemTapDown?.call(item),
-                              onTapCancel: () =>
-                                  widget.onItemTapCancel?.call(item),
-                              child: item.tooltipWidget != null
-                                  ? Tooltip(
-                                      richMessage: WidgetSpan(
-                                          child: item.tooltipWidget!),
-                                      child: Container(
-                                        height: widget.itemSize,
-                                        width: widget.itemSize,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                              widget.itemBorderRadius),
-                                          color: item.color,
-                                        ),
-                                      ))
-                                  : Container(
-                                      height: widget.itemSize,
-                                      width: widget.itemSize,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(
-                                            widget.itemBorderRadius),
-                                        color: item.color,
-                                      ),
-                                    ),
-                            ),
-                          );
-                        }),
-                      );
-                    }),
-                  ],
+  /// Builds all data rows for the grid.
+  /// Uses viewport-aware rendering to only build visible columns for better performance.
+  List<Widget> _buildDataRows(List<DateTime> dates) {
+    return List.generate(widget.rowHeaders.length, (rowIndex) {
+      return Row(
+        children: _buildRowCells(dates, rowIndex),
+      );
+    });
+  }
+
+  /// Builds cells for a single row.
+  /// Only builds cells within the visible viewport range for performance optimization.
+  List<Widget> _buildRowCells(List<DateTime> dates, int rowIndex) {
+    final List<Widget> cells = [];
+
+    // For very large datasets, use viewport-aware rendering
+    // For smaller datasets (< 100 columns), render all for simplicity
+    final useViewportOptimization = dates.length > 100;
+    final startColumn = useViewportOptimization ? _visibleStartColumn : 0;
+    final endColumn = useViewportOptimization ? _visibleEndColumn : dates.length;
+
+    // Add spacers for columns before visible range
+    if (startColumn > 0) {
+      final spacerWidth = startColumn * (widget.itemSize + widget.columnSpacing);
+      cells.add(SizedBox(width: spacerWidth));
+    }
+
+    // Build visible cells
+    for (int columnIndex = startColumn; columnIndex < endColumn; columnIndex++) {
+      if (columnIndex >= dates.length) break;
+
+      final item = widget.itemBuilder != null
+          ? widget.itemBuilder!(rowIndex, columnIndex)
+          : _defaultItemBuilder(rowIndex, columnIndex);
+
+      cells.add(_buildCell(item));
+    }
+
+    // Add spacers for columns after visible range
+    if (endColumn < dates.length) {
+      final spacerWidth = (dates.length - endColumn) * (widget.itemSize + widget.columnSpacing);
+      cells.add(SizedBox(width: spacerWidth));
+    }
+
+    return cells;
+  }
+
+  /// Builds a single cell widget.
+  Widget _buildCell(ZeatMapItem<T> item) {
+    return Padding(
+      padding: EdgeInsets.only(
+        top: widget.rowSpacing,
+        left: widget.columnSpacing,
+      ),
+      child: GestureDetector(
+        onTap: () => widget.onItemTapped?.call(item),
+        onDoubleTap: () => widget.onItemDoubleTapped?.call(item),
+        onLongPress: () => widget.onItemLongPressed?.call(item),
+        onTapDown: (details) => widget.onItemTapDown?.call(item),
+        onTapCancel: () => widget.onItemTapCancel?.call(item),
+        child: item.tooltipWidget != null
+            ? Tooltip(
+                richMessage: WidgetSpan(child: item.tooltipWidget!),
+                child: Container(
+                  height: widget.itemSize,
+                  width: widget.itemSize,
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(widget.itemBorderRadius),
+                    color: item.color,
+                  ),
+                ),
+              )
+            : Container(
+                height: widget.itemSize,
+                width: widget.itemSize,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(widget.itemBorderRadius),
+                  color: item.color,
                 ),
               ),
-            )
-          : SingleChildScrollView(
-              controller: _scrollController,
-              scrollDirection: Axis.horizontal,
-              physics: widget.scrollingEnabled
-                  ? const AlwaysScrollableScrollPhysics()
-                  : const NeverScrollableScrollPhysics(),
-              child: Column(
-                children: [
-                  _generateDateRowYear(),
-                  _generateDateRowMonth(),
-                  _generateDateRowWeek(),
-                  _generateDateRowDay(context),
-                  ...List.generate(widget.rowHeaders.length, (rowIndex) {
-                    return Row(
-                      children: List.generate(dates.length, (columnIndex) {
-                        ZeatMapItem<T> item = widget.itemBuilder != null
-                            ? widget.itemBuilder!(rowIndex, columnIndex)
-                            : _defaultItemBuilder(rowIndex, columnIndex);
-
-                        return Padding(
-                          padding: EdgeInsets.only(
-                            top: widget.rowSpacing,
-                            left: widget.columnSpacing,
-                          ),
-                          child: GestureDetector(
-                            onTap: () => widget.onItemTapped?.call(item),
-                            onDoubleTap: () =>
-                                widget.onItemDoubleTapped?.call(item),
-                            onLongPress: () =>
-                                widget.onItemLongPressed?.call(item),
-                            onTapDown: (details) =>
-                                widget.onItemTapDown?.call(item),
-                            onTapCancel: () =>
-                                widget.onItemTapCancel?.call(item),
-                            child: item.tooltipWidget != null
-                                ? Tooltip(
-                                    richMessage:
-                                        WidgetSpan(child: item.tooltipWidget!),
-                                    child: Container(
-                                      height: widget.itemSize,
-                                      width: widget.itemSize,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(
-                                            widget.itemBorderRadius),
-                                        color: item.color,
-                                      ),
-                                    ))
-                                : Container(
-                                    height: widget.itemSize,
-                                    width: widget.itemSize,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(
-                                          widget.itemBorderRadius),
-                                      color: item.color,
-                                    ),
-                                  ),
-                          ),
-                        );
-                      }),
-                    );
-                  }),
-                ],
-              ),
-            ),
+      ),
     );
   }
 
@@ -1084,7 +1124,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
               );
             }),
           )
-        : Container();
+        : const SizedBox.shrink();
   }
 
   Widget _generateDateRowWeek() {
@@ -1113,7 +1153,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
               );
             }),
           )
-        : Container();
+        : const SizedBox.shrink();
   }
 
   Widget _generateDateRowMonth() {
@@ -1142,7 +1182,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
               );
             }),
           )
-        : Container();
+        : const SizedBox.shrink();
   }
 
   Widget _generateDateRowYear() {
@@ -1170,7 +1210,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
               );
             }),
           )
-        : Container();
+        : const SizedBox.shrink();
   }
 
   Column _generateRowHeaderColumn() {
