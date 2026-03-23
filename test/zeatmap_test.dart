@@ -58,9 +58,20 @@ void main() {
     expect(find.text('Row 1'), findsOneWidget);
     expect(find.text('Row 2'), findsOneWidget);
 
-    // Test item grid
-    expect(find.byType(GestureDetector),
-        findsNWidgets(25)); // 2 rows * 10 columns + 4 navigation buttons
+    // Grid uses lazy builder for horizontal scrolling
+    final gridFinder = find.byKey(const PageStorageKey('zeatmap-grid'));
+    expect(gridFinder, findsOneWidget);
+    final gridView = tester.widget<ListView>(gridFinder);
+    expect(gridView.scrollDirection, Axis.horizontal);
+    expect(gridView.childrenDelegate.estimatedChildCount, dates.length);
+
+    // Test item cells are built
+    final blueCellFinder = find.byWidgetPredicate((widget) {
+      if (widget is! Container) return false;
+      final decoration = widget.decoration;
+      return decoration is BoxDecoration && decoration.color == Colors.blue;
+    });
+    expect(blueCellFinder, findsWidgets);
 
     // Test scrolling
     await tester.tap(find.byIcon(Icons.chevron_right));

@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/scheduler.dart';
 import 'package:zeatmap/src/zeatmap_legend_item.dart';
@@ -203,6 +204,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   late int currentMonth;
   late int currentYear;
   late List<int> _availableYears;
+  List<DateTime> _aggregatedDates = const [];
 
   // Variables for handling drag gesture
   double? _dragStartPosition;
@@ -410,6 +412,7 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
 
     // Calculate the available years from the available dates
     _updateDateBoundaries();
+    _refreshAggregatedDates();
 
     // Determine the initial year based on provided parameters
     if (widget.selectedYear != null &&
@@ -460,9 +463,17 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   void didUpdateWidget(covariant ZeatMap<T> oldWidget) {
     super.didUpdateWidget(oldWidget);
 
-    // Recalculate date boundaries if dates changed
-    if (oldWidget.dates != widget.dates) {
-      _updateDateBoundaries();
+    final datesChanged = !listEquals(oldWidget.dates, widget.dates);
+    final granularityChanged = oldWidget.granularity != widget.granularity;
+    final yearsChanged = !listEquals(oldWidget.years, widget.years);
+
+    if (datesChanged || granularityChanged || yearsChanged) {
+      setState(() {
+        if (datesChanged || yearsChanged) {
+          _updateDateBoundaries();
+        }
+        _refreshAggregatedDates();
+      });
     }
 
     // Automatically scroll to currentMonth when widget updates (e.g., new dates provided)
@@ -576,7 +587,9 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
 
   /// Aggregates dates based on the current granularity setting.
   /// Returns a list of representative dates for each time period.
-  List<DateTime> get aggregatedDates {
+  List<DateTime> get aggregatedDates => _aggregatedDates;
+
+  List<DateTime> _computeAggregatedDates() {
     switch (widget.granularity) {
       case ZeatMapGranularity.day:
         return widget.dates;
@@ -586,6 +599,20 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
         return _aggregateByMonth();
       case ZeatMapGranularity.year:
         return _aggregateByYear();
+    }
+  }
+
+  void _refreshAggregatedDates({bool withSetState = false}) {
+    final updatedDates = _computeAggregatedDates();
+    if (listEquals(_aggregatedDates, updatedDates)) {
+      return;
+    }
+    if (withSetState) {
+      setState(() {
+        _aggregatedDates = updatedDates;
+      });
+    } else {
+      _aggregatedDates = updatedDates;
     }
   }
 
@@ -849,328 +876,231 @@ class ZeatMapState<T> extends State<ZeatMap<T>> {
   /// This includes all the cells representing data points.
   Expanded _generateDataGrid(BuildContext context) {
     final dates = aggregatedDates;
+    final grid = ListView.builder(
+      key: const PageStorageKey('zeatmap-grid'),
+      controller: _scrollController,
+      scrollDirection: Axis.horizontal,
+      physics: widget.scrollingEnabled
+          ? const AlwaysScrollableScrollPhysics()
+          : const NeverScrollableScrollPhysics(),
+      itemExtent: widget.itemSize + widget.columnSpacing,
+      cacheExtent: (widget.itemSize + widget.columnSpacing) * 20,
+      itemCount: dates.length,
+      itemBuilder: (context, columnIndex) {
+        return _buildGridColumn(context, dates[columnIndex], columnIndex);
+      },
+    );
+
+    if (!widget.dragToScrollEnabled) {
+      return Expanded(child: grid);
+    }
+
     return Expanded(
-      child: (widget.scrollingEnabled || widget.dragToScrollEnabled)
-          ? GestureDetector(
-              // Only enable drag gestures if dragToScrollEnabled is true
-              onHorizontalDragStart: widget.dragToScrollEnabled
-                  ? (details) {
-                      _dragStartPosition = details.localPosition.dx;
-                      _dragStartScrollOffset = _scrollController.offset;
-                      _lastDragPosition = details.localPosition;
-                      _isDragging = true;
-                    }
-                  : null,
-              onHorizontalDragUpdate: widget.dragToScrollEnabled
-                  ? (details) {
-                      if (_isDragging &&
-                          _dragStartPosition != null &&
-                          _dragStartScrollOffset != null) {
-                        final double dragDistance =
-                            _dragStartPosition! - details.localPosition.dx;
-                        final double targetOffset =
-                            _dragStartScrollOffset! + dragDistance;
-                        if (targetOffset >= 0 &&
-                            targetOffset <=
-                                _scrollController.position.maxScrollExtent) {
-                          _scrollController.jumpTo(targetOffset);
-                        }
+      child: GestureDetector(
+        onHorizontalDragStart: (details) {
+          _dragStartPosition = details.localPosition.dx;
+          _dragStartScrollOffset = _scrollController.offset;
+          _lastDragPosition = details.localPosition;
+          _isDragging = true;
+        },
+        onHorizontalDragUpdate: (details) {
+          if (_isDragging &&
+              _dragStartPosition != null &&
+              _dragStartScrollOffset != null) {
+            final double dragDistance =
+                _dragStartPosition! - details.localPosition.dx;
+            final double targetOffset =
+                _dragStartScrollOffset! + dragDistance;
+            if (targetOffset >= 0 &&
+                targetOffset <= _scrollController.position.maxScrollExtent) {
+              _scrollController.jumpTo(targetOffset);
+            }
 
-                        // Calculate velocity for possible inertia scrolling
-                        if (_lastDragPosition != null) {
-                          final double distance =
-                              details.localPosition.dx - _lastDragPosition!.dx;
-                          _dragVelocity = distance;
-                        }
-                        _lastDragPosition = details.localPosition;
-                      }
-                    }
-                  : null,
-              onHorizontalDragEnd: widget.dragToScrollEnabled
-                  ? (details) {
-                      if (_isDragging) {
-                        // Apply inertia scrolling with velocity from drag
-                        if (_dragVelocity.abs() > 5) {
-                          final targetOffset =
-                              _scrollController.offset - (_dragVelocity * 2.0);
-                          if (targetOffset >= 0 &&
-                              targetOffset <=
-                                  _scrollController.position.maxScrollExtent) {
-                            _scrollController.animateTo(
-                              targetOffset,
-                              duration: const Duration(milliseconds: 300),
-                              curve: Curves.decelerate,
-                            );
-                          }
-                        }
-                        _isDragging = false;
-                        _dragStartPosition = null;
-                        _dragStartScrollOffset = null;
-                        _lastDragPosition = null;
-                      }
-                    }
-                  : null,
-              child: SingleChildScrollView(
-                controller: _scrollController,
-                scrollDirection: Axis.horizontal,
-                // Only enable scroll physics if scrollingEnabled is true
-                physics: widget.scrollingEnabled
-                    ? const AlwaysScrollableScrollPhysics()
-                    : const NeverScrollableScrollPhysics(),
-                child: Column(
-                  children: [
-                    _generateDateRowYear(),
-                    _generateDateRowMonth(),
-                    _generateDateRowWeek(),
-                    _generateDateRowDay(context),
-                    ...List.generate(widget.rowHeaders.length, (rowIndex) {
-                      return Row(
-                        children: List.generate(dates.length, (columnIndex) {
-                          ZeatMapItem<T> item = widget.itemBuilder != null
-                              ? widget.itemBuilder!(rowIndex, columnIndex)
-                              : _defaultItemBuilder(rowIndex, columnIndex);
-
-                          return Padding(
-                            padding: EdgeInsets.only(
-                              top: widget.rowSpacing,
-                              left: widget.columnSpacing,
-                            ),
-                            child: GestureDetector(
-                              onTap: () => widget.onItemTapped?.call(item),
-                              onDoubleTap: () =>
-                                  widget.onItemDoubleTapped?.call(item),
-                              onLongPress: () =>
-                                  widget.onItemLongPressed?.call(item),
-                              onTapDown: (details) =>
-                                  widget.onItemTapDown?.call(item),
-                              onTapCancel: () =>
-                                  widget.onItemTapCancel?.call(item),
-                              child: item.tooltipWidget != null
-                                  ? Tooltip(
-                                      richMessage: WidgetSpan(
-                                          child: item.tooltipWidget!),
-                                      child: Container(
-                                        height: widget.itemSize,
-                                        width: widget.itemSize,
-                                        decoration: BoxDecoration(
-                                          borderRadius: BorderRadius.circular(
-                                              widget.itemBorderRadius),
-                                          color: item.color,
-                                        ),
-                                      ))
-                                  : Container(
-                                      height: widget.itemSize,
-                                      width: widget.itemSize,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(
-                                            widget.itemBorderRadius),
-                                        color: item.color,
-                                      ),
-                                    ),
-                            ),
-                          );
-                        }),
-                      );
-                    }),
-                  ],
-                ),
-              ),
-            )
-          : SingleChildScrollView(
-              controller: _scrollController,
-              scrollDirection: Axis.horizontal,
-              physics: widget.scrollingEnabled
-                  ? const AlwaysScrollableScrollPhysics()
-                  : const NeverScrollableScrollPhysics(),
-              child: Column(
-                children: [
-                  _generateDateRowYear(),
-                  _generateDateRowMonth(),
-                  _generateDateRowWeek(),
-                  _generateDateRowDay(context),
-                  ...List.generate(widget.rowHeaders.length, (rowIndex) {
-                    return Row(
-                      children: List.generate(dates.length, (columnIndex) {
-                        ZeatMapItem<T> item = widget.itemBuilder != null
-                            ? widget.itemBuilder!(rowIndex, columnIndex)
-                            : _defaultItemBuilder(rowIndex, columnIndex);
-
-                        return Padding(
-                          padding: EdgeInsets.only(
-                            top: widget.rowSpacing,
-                            left: widget.columnSpacing,
-                          ),
-                          child: GestureDetector(
-                            onTap: () => widget.onItemTapped?.call(item),
-                            onDoubleTap: () =>
-                                widget.onItemDoubleTapped?.call(item),
-                            onLongPress: () =>
-                                widget.onItemLongPressed?.call(item),
-                            onTapDown: (details) =>
-                                widget.onItemTapDown?.call(item),
-                            onTapCancel: () =>
-                                widget.onItemTapCancel?.call(item),
-                            child: item.tooltipWidget != null
-                                ? Tooltip(
-                                    richMessage:
-                                        WidgetSpan(child: item.tooltipWidget!),
-                                    child: Container(
-                                      height: widget.itemSize,
-                                      width: widget.itemSize,
-                                      decoration: BoxDecoration(
-                                        borderRadius: BorderRadius.circular(
-                                            widget.itemBorderRadius),
-                                        color: item.color,
-                                      ),
-                                    ))
-                                : Container(
-                                    height: widget.itemSize,
-                                    width: widget.itemSize,
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(
-                                          widget.itemBorderRadius),
-                                      color: item.color,
-                                    ),
-                                  ),
-                          ),
-                        );
-                      }),
-                    );
-                  }),
-                ],
-              ),
-            ),
+            // Calculate velocity for possible inertia scrolling
+            if (_lastDragPosition != null) {
+              final double distance =
+                  details.localPosition.dx - _lastDragPosition!.dx;
+              _dragVelocity = distance;
+            }
+            _lastDragPosition = details.localPosition;
+          }
+        },
+        onHorizontalDragEnd: (details) {
+          if (_isDragging) {
+            // Apply inertia scrolling with velocity from drag
+            if (_dragVelocity.abs() > 5) {
+              final targetOffset =
+                  _scrollController.offset - (_dragVelocity * 2.0);
+              if (targetOffset >= 0 &&
+                  targetOffset <= _scrollController.position.maxScrollExtent) {
+                _scrollController.animateTo(
+                  targetOffset,
+                  duration: const Duration(milliseconds: 300),
+                  curve: Curves.decelerate,
+                );
+              }
+            }
+            _isDragging = false;
+            _dragStartPosition = null;
+            _dragStartScrollOffset = null;
+            _lastDragPosition = null;
+          }
+        },
+        child: grid,
+      ),
     );
   }
 
-  Widget _generateDateRowDay(BuildContext context) {
-    final dates = aggregatedDates;
-    // Only show day row if granularity is day
-    return widget.showDay && widget.granularity == ZeatMapGranularity.day
-        ? Row(
-            children: List.generate(dates.length, (index) {
-              DateTime currentDate = dates[index];
-              bool isToday = DateTime(
-                      currentDate.year, currentDate.month, currentDate.day) ==
-                  DateTime(DateTime.now().year, DateTime.now().month,
-                      DateTime.now().day);
-
-              Widget dayWidget = Container(
-                decoration: widget.highlightToday && isToday
-                    ? const BoxDecoration(
-                        shape: BoxShape.circle,
-                        color: Colors.blue,
-                      )
-                    : null,
-                height: widget.itemSize,
-                width: widget.itemSize,
-                child: widget.dayBuilder != null
-                    ? widget.dayBuilder!(currentDate)
-                    : Center(
-                        child: Text(
-                          getDateLabel(currentDate),
-                          style: widget.highlightToday && isToday
-                              ? const TextStyle(
-                                  fontWeight: FontWeight.bold,
-                                  color: Colors.white)
-                              : null,
-                        ),
-                      ),
-              );
-
+  Widget _buildGridColumn(
+      BuildContext context, DateTime date, int columnIndex) {
+    return Padding(
+      padding: EdgeInsets.only(left: widget.columnSpacing),
+      child: SizedBox(
+        width: widget.itemSize,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            ..._buildHeaderCells(context, date),
+            ...List.generate(widget.rowHeaders.length, (rowIndex) {
               return Padding(
-                padding: EdgeInsets.only(left: widget.columnSpacing),
-                child: dayWidget,
+                padding: EdgeInsets.only(top: widget.rowSpacing),
+                child: _buildDataCell(rowIndex, columnIndex),
               );
             }),
-          )
-        : Container();
+          ],
+        ),
+      ),
+    );
   }
 
-  Widget _generateDateRowWeek() {
-    final dates = aggregatedDates;
-    // Only show week row if granularity is day or week
-    return widget.showWeek &&
-            widget.granularity.index <= ZeatMapGranularity.week.index
-        ? Row(
-            children: List.generate(dates.length, (index) {
-              return Padding(
-                padding: EdgeInsets.only(left: widget.columnSpacing),
-                child: SizedBox(
-                  height: widget.itemSize,
-                  width: widget.itemSize,
-                  child: widget.granularity == ZeatMapGranularity.week ||
-                          (dates[index].weekday == DateTime.monday)
-                      ? Center(
-                          child: Text(
-                            "W${getWeekNumber(dates[index])}",
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        )
-                      : null,
-                ),
-              );
-            }),
-          )
-        : Container();
+  List<Widget> _buildHeaderCells(BuildContext context, DateTime date) {
+    final headers = <Widget>[];
+    if (widget.showYear) {
+      headers.add(_buildYearCell(date));
+    }
+    if (widget.showMonth &&
+        widget.granularity.index <= ZeatMapGranularity.month.index) {
+      headers.add(_buildMonthCell(date));
+    }
+    if (widget.showWeek &&
+        widget.granularity.index <= ZeatMapGranularity.week.index) {
+      headers.add(_buildWeekCell(date));
+    }
+    if (widget.showDay && widget.granularity == ZeatMapGranularity.day) {
+      headers.add(_buildDayCell(context, date));
+    }
+    return headers;
   }
 
-  Widget _generateDateRowMonth() {
-    final dates = aggregatedDates;
-    // Only show month row if granularity is day, week, or month
-    return widget.showMonth &&
-            widget.granularity.index <= ZeatMapGranularity.month.index
-        ? Row(
-            children: List.generate(dates.length, (index) {
-              return Padding(
-                padding: EdgeInsets.only(left: widget.columnSpacing),
-                child: SizedBox(
-                  height: widget.itemSize,
-                  width: widget.itemSize,
-                  child: widget.granularity == ZeatMapGranularity.month ||
-                          (dates[index].day == 1)
-                      ? Center(
-                          child: Text(
-                            DateFormat('MMM').format(dates[index]),
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        )
-                      : null,
-                ),
-              );
-            }),
-          )
-        : Container();
+  Widget _buildYearCell(DateTime date) {
+    return SizedBox(
+      height: widget.itemSize,
+      width: widget.itemSize,
+      child: widget.granularity == ZeatMapGranularity.year ||
+              (date.month == 1 && date.day == 1)
+          ? Center(
+              child: Text(
+                DateFormat('yyyy').format(date),
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            )
+          : null,
+    );
   }
 
-  Widget _generateDateRowYear() {
-    final dates = aggregatedDates;
-    // Always show year row
-    return widget.showYear
-        ? Row(
-            children: List.generate(dates.length, (index) {
-              return Padding(
-                padding: EdgeInsets.only(left: widget.columnSpacing),
-                child: SizedBox(
-                  height: widget.itemSize,
-                  width: widget.itemSize,
-                  child: widget.granularity == ZeatMapGranularity.year ||
-                          (dates[index].month == 1 && dates[index].day == 1)
-                      ? Center(
-                          child: Text(
-                            DateFormat('yyyy').format(dates[index]),
-                            overflow: TextOverflow.ellipsis,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                        )
-                      : null,
-                ),
-              );
-            }),
-          )
-        : Container();
+  Widget _buildMonthCell(DateTime date) {
+    return SizedBox(
+      height: widget.itemSize,
+      width: widget.itemSize,
+      child: widget.granularity == ZeatMapGranularity.month || date.day == 1
+          ? Center(
+              child: Text(
+                DateFormat('MMM').format(date),
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildWeekCell(DateTime date) {
+    return SizedBox(
+      height: widget.itemSize,
+      width: widget.itemSize,
+      child: widget.granularity == ZeatMapGranularity.week ||
+              (date.weekday == DateTime.monday)
+          ? Center(
+              child: Text(
+                "W${getWeekNumber(date)}",
+                overflow: TextOverflow.ellipsis,
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+            )
+          : null,
+    );
+  }
+
+  Widget _buildDayCell(BuildContext context, DateTime date) {
+    final today = DateTime.now();
+    final isToday = DateTime(date.year, date.month, date.day) ==
+        DateTime(today.year, today.month, today.day);
+
+    final dayContent = widget.dayBuilder != null
+        ? widget.dayBuilder!(date)
+        : Center(
+            child: Text(
+              getDateLabel(date),
+              style: widget.highlightToday && isToday
+                  ? const TextStyle(
+                      fontWeight: FontWeight.bold, color: Colors.white)
+                  : null,
+            ),
+          );
+
+    return SizedBox(
+      height: widget.itemSize,
+      width: widget.itemSize,
+      child: Container(
+        decoration: widget.highlightToday && isToday
+            ? const BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.blue,
+              )
+            : null,
+        child: dayContent,
+      ),
+    );
+  }
+
+  Widget _buildDataCell(int rowIndex, int columnIndex) {
+    final ZeatMapItem<T> item = widget.itemBuilder != null
+        ? widget.itemBuilder!(rowIndex, columnIndex)
+        : _defaultItemBuilder(rowIndex, columnIndex);
+
+    final cell = Container(
+      height: widget.itemSize,
+      width: widget.itemSize,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(widget.itemBorderRadius),
+        color: item.color,
+      ),
+    );
+
+    return GestureDetector(
+      onTap: () => widget.onItemTapped?.call(item),
+      onDoubleTap: () => widget.onItemDoubleTapped?.call(item),
+      onLongPress: () => widget.onItemLongPressed?.call(item),
+      onTapDown: (details) => widget.onItemTapDown?.call(item),
+      onTapCancel: () => widget.onItemTapCancel?.call(item),
+      child: item.tooltipWidget != null
+          ? Tooltip(
+              richMessage: WidgetSpan(child: item.tooltipWidget!),
+              child: cell,
+            )
+          : cell,
+    );
   }
 
   Column _generateRowHeaderColumn() {

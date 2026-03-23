@@ -15,6 +15,7 @@ A highly customizable Flutter heatmap widget for visualizing data across date ra
 - ✅ Customizable legends for data categories
 - ✅ Automatic highlighting of the current day
 - ✅ Smooth scrolling through date ranges
+- ✅ Lazy, horizontal rendering for large date ranges to keep scrolling smooth
 - ✅ Fully customizable appearance including colors, spacing, and sizing
 
 ## Installation
