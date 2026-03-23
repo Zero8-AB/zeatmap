@@ -1,3 +1,24 @@
+## [Unreleased]
+
+### Performance Improvements
+- **Viewport-aware rendering**: Implemented horizontal viewport optimization that only renders visible columns when datasets exceed 100 columns, significantly reducing widget tree size for large grids
+- **Aggregated dates caching**: Added caching mechanism for aggregated dates to avoid recalculating date aggregations on every build
+- **Scroll listener optimization**: Added intelligent scroll listener that updates visible viewport range only when scrolling significantly changes (>2 columns threshold)
+- **Code deduplication**: Removed duplicate rendering logic in `_generateDataGrid` method, reducing code size by ~65 lines
+- **Const optimizations**: Added const constructors to `ZeatMapLegendItem` and replaced empty `Container()` widgets with `const SizedBox.shrink()` for better performance
+
+### Technical Details
+- For datasets with >100 columns, only visible columns plus a 5-column buffer are rendered
+- Cache invalidation occurs automatically when dates or granularity changes
+- Viewport calculations use scroll offset and viewport dimensions to determine visible range
+- All optimizations are backward compatible with no API changes
+
+### Testing
+- Added comprehensive tests for large datasets (100 rows × 365 dates)
+- Added tests to verify viewport optimization reduces widget count
+- Added tests to verify aggregated dates caching works correctly
+- All existing tests continue to pass
+
 ## [0.2.5](https://github.com/Zero8-AB/zeatmap/compare/v0.2.4...v0.2.5) (2025-05-27)
 
 

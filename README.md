@@ -16,6 +16,24 @@ A highly customizable Flutter heatmap widget for visualizing data across date ra
 - ✅ Automatic highlighting of the current day
 - ✅ Smooth scrolling through date ranges
 - ✅ Fully customizable appearance including colors, spacing, and sizing
+- ✅ **High performance with large datasets** - optimized for smooth scrolling with 100+ rows and 365+ dates
+
+## Performance
+
+ZeatMap is optimized to handle large datasets efficiently:
+
+- **Viewport-aware rendering**: Only visible columns are rendered when datasets exceed 100 columns
+- **Intelligent caching**: Date aggregations are cached to avoid redundant calculations
+- **Smooth scrolling**: Grid remains responsive even with thousands of cells
+- **Automatic optimization**: Performance improvements are applied automatically based on dataset size
+
+For detailed information about performance optimizations, see [PERFORMANCE.md](PERFORMANCE.md).
+
+### Performance Tips
+
+- Use appropriate granularity (week/month/year) for large date ranges
+- Keep custom item builders lightweight
+- Use `const` constructors for legend items when possible
 
 ## Installation
 
